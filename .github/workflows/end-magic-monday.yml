@@ -1,0 +1,11 @@
+name: End Magic Monday
+
+on:
+  schedule:
+    # Run at 5:00 UTC (12:00 AM EST) on Tuesday
+    - cron: '0 5 * * 2'
+  workflow_dispatch:
+
+jobs:
+  end-magic-monday:
+    runs-on: ubuntu-latest
