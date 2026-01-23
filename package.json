@@ -17,6 +17,7 @@
     "@types/xml2js": "^0.4.14",
     "@vercel/analytics": "^1.5.0",
     "canvas-confetti": "^1.9.4",
+    "firebase": "^12.8.0",
     "framer-motion": "^12.4.10",
     "fs": "^0.0.1-security",
     "gray-matter": "^4.0.3",

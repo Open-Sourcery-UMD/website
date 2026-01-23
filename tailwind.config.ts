@@ -52,7 +52,7 @@ const config: Config = {
       },
       colors: {
         'ycs-black': '#141414',
-        'ycs-pink': '#FFB090',
+        'ycs-pink': '#90c8ff',
         'ycs-faded-pink': '',
         'ycs-old-pink': '#F45A5A', // strong logo pink
         'ycs-blue': '#0071BC',

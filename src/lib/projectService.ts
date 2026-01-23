@@ -14,7 +14,7 @@ export function setProjectKeywords() {
 
 }
 
-export function setProjectMinYear() {
+export function setProjectYearRange(minYear: number, maxYear: number) {
 
 }
 

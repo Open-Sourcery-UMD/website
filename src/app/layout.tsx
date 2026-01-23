@@ -6,6 +6,7 @@ import '@styles/globals.css';
 
 import Navbar from '@components/Navbar';
 import { Footer } from '@components/Footer';
+import { AuthProvider } from '@context/AuthContext';
 
 // const inter = Inter({ subsets: ["latin"] });
 const dmSans = DM_Sans({
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   title: 'Open Sourcery',
   description: 'An open-source development club at UMD',
   icons: {
-    icon: './favicon.ico',
+    icon: '/open_sourcery.png',
   },
 };
 
@@ -31,9 +32,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`  bg-[#000000] text-white ${dmSans.className}`}>
+        <AuthProvider>
           <Navbar />
           {children}
           <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

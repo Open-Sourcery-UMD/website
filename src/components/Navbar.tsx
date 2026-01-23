@@ -4,21 +4,22 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { NavbarMobileMenu } from './NavbarMobileMenu';
+import SignInButton from './SignInButton';
 
 export const navigationItems = [
   { name: 'Home', link: '/' },
   { name: 'Projects',
     link: '/',
     subItems: [
-      { name: 'Start a project', link: '/projectproposalform' },
-      { name: 'Join a project', link: '/teammatchingportal'}
+      { name: 'Start a project', link: '/project-proposal-form' },
+      { name: 'Join a project', link: '/team-matching-portal'}
     ],
   },
   { name: 'Events', link: '/' },
   {
     name: 'Gems',
     link: '/',
-  },
+  }
 ];
 
 function Navbar() {
@@ -76,6 +77,7 @@ function Navbar() {
                 )}
               </li>
             ))}
+            <SignInButton />
           </ul>
         )}
       </nav>
