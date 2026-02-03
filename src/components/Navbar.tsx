@@ -7,18 +7,20 @@ import { NavbarMobileMenu } from './NavbarMobileMenu';
 import SignInButton from './SignInButton';
 
 export const navigationItems = [
-  { name: 'Home', link: '/' },
+  { name: 'Home',
+    color: 'white',
+    link: '/' },
   { name: 'Projects',
-    link: '/',
+    color: 'white',
     subItems: [
       { name: 'Start a project', link: '/project-proposal-form' },
-      { name: 'Join a project', link: '/team-matching-portal'}
+      { name: 'Join a project', link: '/team-matching-portal/form'}
     ],
   },
-  { name: 'Events', link: '/' },
   {
     name: 'Gems',
-    link: '/',
+    color: 'green',
+    link: '/gems',
   }
 ];
 
@@ -58,9 +60,9 @@ function Navbar() {
                 onMouseLeave={() => setActiveDropdown(null)}
               >
                 <Link
-                  href={item.link}
-                  className="nav-link transform duration-100 px-2 pb-2 top-[6px]"
-                  target={!item.link.startsWith('/') ? '_blank' : undefined}
+                  href={item.link ? item.link : ''}
+                  className={`nav-link transform duration-100 px-2 pb-2 top-[6px] text-${item.color} ${item.link ? '' : 'pointer-events-none'}`}
+                  target={!item.link?.startsWith('/') ? '_blank' : undefined}
                 >
                   {item.name}
                 </Link>

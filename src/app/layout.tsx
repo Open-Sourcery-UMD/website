@@ -7,6 +7,7 @@ import '@styles/globals.css';
 import Navbar from '@components/Navbar';
 import { Footer } from '@components/Footer';
 import { AuthProvider } from '@context/AuthContext';
+import { TeamMatchingProvider } from '@context/TeamMatchingContext';
 
 // const inter = Inter({ subsets: ["latin"] });
 const dmSans = DM_Sans({
@@ -33,9 +34,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`  bg-[#000000] text-white ${dmSans.className}`}>
         <AuthProvider>
-          <Navbar />
-          {children}
-          <Footer />
+          <TeamMatchingProvider>
+            <Navbar />
+            {children}
+            <Footer />
+          </TeamMatchingProvider>
         </AuthProvider>
       </body>
     </html>

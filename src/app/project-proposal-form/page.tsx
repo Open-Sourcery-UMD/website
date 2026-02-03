@@ -3,6 +3,8 @@
 import { useState, useMemo } from 'react';
 import { PageContainer, SectionContainer } from '@components/Container';
 import { TECHNOLOGIES, TOPICS } from '@data';
+import { useAuth } from '@context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface ProposalData {
   projectName: string;
@@ -17,8 +19,21 @@ interface ProposalData {
 const YEAR_LABELS = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Grad Student'];
 const GITHUB_REPO_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const YEAR_MAX = 4;
+const TOPICS_MAX = 20;
+
+const formatYearRange = (min: number, max: number) => {
+  if (min === max) {
+    return YEAR_LABELS[min] === 'Freshman'
+      ? 'Freshmen Only'
+      : `${YEAR_LABELS[min]}s Only`;
+  }
+  return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
+};
 
 const ProjectProposalPage = () => {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [yearMin, setYearMin] = useState(1);
@@ -49,10 +64,7 @@ const ProjectProposalPage = () => {
     [topicInput, topics, allTopics]
   );
 
-  const yearLabel =
-    yearMin === yearMax
-      ? YEAR_LABELS[yearMin] === 'Freshman' ? `Freshmen Only` : `${YEAR_LABELS[yearMin]}s Only`
-      : `${YEAR_LABELS[yearMin]} – ${YEAR_LABELS[yearMax]}`;
+  const yearLabel = formatYearRange(yearMin, yearMax);
 
   const minPercent = (yearMin / YEAR_MAX) * 100;
   const maxPercent = (yearMax / YEAR_MAX) * 100;
@@ -79,7 +91,7 @@ const ProjectProposalPage = () => {
     setTopicInput('');
   };
 
-  const submitProposal = () => {
+  const submitProposal = async () => {
     const data: ProposalData = {
       projectName,
       description,
@@ -89,14 +101,50 @@ const ProjectProposalPage = () => {
       topics,
       maxTeamSize,
     };
-    console.log(data);
+
+    if (loading || !user || !user.email) {
+      return;
+    }
+
+    await fetch("/api/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipients: ["Open Sourcery <umdopensourcery@gmail.com>"],
+        subject: `[ACTION REQUIRED] A new project proposal has been submitted: ${projectName}`,
+        message: `
+        Dear Open Sourcery Team,
+
+        The following project proposal was submitted via the Open Sourcery Website on ${new Date().toLocaleString()} by ${user.email}:
+
+        Project Name: ${data.projectName}
+        Description: ${data.description}
+        Year Range: ${formatYearRange(data.yearRange[0], data.yearRange[1])}
+        Technologies Used: ${data.technologiesUsed}
+        Technologies Required: ${data.technologiesRequired}
+        Topics: ${data.topics}
+        Max. Team Size: ${data.maxTeamSize}
+
+        If this project seems reasonable, please complete the following steps:
+          1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics.
+          2. Email ${user.email} to inform them that their project's repository has been created.
+          3. ???
+
+        Happy hacking!
+        `,
+      }),
+    });
+
+    router.push("/project-proposal-form/submitted")
   };
 
   return (
     <PageContainer>
       <SectionContainer>
-        <h1 className="text-4xl md:text-6xl font-semibold mb-12 bg-gradient-to-r from-ycs-pink to-ycs-pink text-transparent bg-clip-text">
-          Project Proposal
+        <h1 className="text-4xl md:text-6xl font-semibold mb-12 text-ycs-pink">
+          Project Proposal Form
         </h1>
 
         {/* Project Name */}
@@ -282,7 +330,7 @@ const ProjectProposalPage = () => {
             placeholder="Start typing a topic…"
           />
 
-          {topicInput && filteredTopics.length > 0 && (
+          {topicInput && filteredTopics.length > 0 && topics.length < TOPICS_MAX && (
             <div className="absolute z-10 w-full mt-1 bg-neutral-900 border border-neutral-700 rounded shadow-lg max-h-48 overflow-y-auto">
               {filteredTopics.map((topic) => (
                 <div

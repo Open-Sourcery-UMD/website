@@ -32,7 +32,7 @@ export default function SignInButton() {
   return (
     <button
       onClick={handleClick}
-      className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition"
+      className="px-4 py-2 rounded bg-opacity-50 bg-blue-600 text-white hover:bg-opacity-60 transition"
     >
       {user ? user.email : "Sign In"}
     </button>

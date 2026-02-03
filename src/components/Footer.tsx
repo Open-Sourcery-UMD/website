@@ -9,13 +9,17 @@ interface FooterIconProps {
 }
 
 const FooterIcon: React.FC<FooterIconProps> = (props: FooterIconProps) => {
+  const resizedIcon = cloneElement(props.icon, { size: 40 });
+
   return (
     <Link
       href={props.link}
       className="h-7 transform transition-transform hover:scale-110 hover:duration-200"
       aria-label={props.ariaLabel}
+      target="_blank"
+      rel="noopener noreferrer"
     >
-      {props.icon}
+      {resizedIcon}
     </Link>
   );
 };

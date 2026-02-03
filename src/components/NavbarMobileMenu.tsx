@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
@@ -51,9 +53,9 @@ export const NavbarMobileMenu = () => {
               onMouseLeave={() => setActiveDropdown(null)}
             >
               <Link
-                href={item.link}
-                className="nav-link transform duration-100 px-2 pb-2 top-[6px]"
-                target={!item.link.startsWith('/') ? '_blank' : undefined}
+                href={item.link ? item.link : '/'}
+                className={`nav-link transform duration-100 px-2 pb-2 top-[6px] ${item.link ? '' : 'pointer-events-none'}`}
+                target={!item.link?.startsWith('/') ? '_blank' : undefined}
               >
                 {item.name}
               </Link>

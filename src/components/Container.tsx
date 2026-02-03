@@ -20,7 +20,7 @@ export const SectionContainer = ({
   className?: string;
 }) => (
   <section
-    className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mb-16 sm:mb-24 lg:mb-32 ${className}`}
+    className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mb-16 sm:mb-16 lg:mb-24 ${className}`}
   >
     {children}
   </section>
