@@ -1,0 +1,46 @@
+import type { Metadata } from 'next';
+// import { Inter } from "next/font/google";
+import { DM_Sans } from 'next/font/google';
+import '@styles/globals.css';
+// import localFont from "next/font/local";
+
+import Navbar from '@components/Navbar';
+import { Footer } from '@components/Footer';
+import { AuthProvider } from '@context/AuthContext';
+import { TeamMatchingProvider } from '@context/TeamMatchingContext';
+
+// const inter = Inter({ subsets: ["latin"] });
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+});
+// const mona = localFont({ src: "../fonts/Mona-Sans.woff2" });
+
+export const metadata: Metadata = {
+  title: 'Open Sourcery',
+  description: 'An open-source development club at UMD',
+  icons: {
+    icon: '/open_sourcery.png',
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className={`  bg-[#000000] text-white ${dmSans.className}`}>
+        <AuthProvider>
+          <TeamMatchingProvider>
+            <Navbar />
+            {children}
+            <Footer />
+          </TeamMatchingProvider>
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
