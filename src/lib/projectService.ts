@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { Project } from '@/data';
 import { getOrganizationRepositories, getRepositoryTeamMembers, inviteUserToRepository } from './githubService';
-import { updateUserProfile } from './userService';
+import { updateUserProfile, getUserProfile } from './userService';
 
 const PROJECTS_COLLECTION = 'projects';
 
@@ -177,6 +177,26 @@ export async function getUserCurrentProject(uid: string): Promise<Project | null
 }
 
 /**
+ * Fetches the lead developer's email for a project
+ * @param project Project object containing createdBy (lead developer UID)
+ * @returns Email of the lead developer or null if not found
+ */
+async function getLeadDeveloperEmail(project: Project): Promise<string | null> {
+  try {
+    if (!project.createdBy) {
+      console.warn('Project has no createdBy field');
+      return null;
+    }
+
+    const leadDevProfile = await getUserProfile(project.createdBy);
+    return leadDevProfile?.email || null;
+  } catch (error) {
+    console.error('Error fetching lead developer email:', error);
+    return null;
+  }
+}
+
+/**
  * Updates a project's team size from GitHub
  */
 export async function updateProjectTeamSize(projectId: string): Promise<number> {
@@ -231,10 +251,17 @@ export async function joinProject(
     const userDocRef = doc(usersRef, uid);
     const userSnap = await getDoc(userDocRef);
 
+    let developerName = githubUsername; // Fallback to GitHub username
     if (userSnap.exists()) {
       const userData = userSnap.data();
       if (userData.currProject) {
         throw new Error('Already assigned to a project');
+      }
+      // Get developer's full name if available
+      if (userData.firstName && userData.lastName) {
+        developerName = `${userData.firstName} ${userData.lastName}`;
+      } else if (userData.firstName) {
+        developerName = userData.firstName;
       }
     }
 
@@ -246,6 +273,39 @@ export async function joinProject(
 
     // Update project's currentTeamSize
     await updateProjectTeamSize(projectId);
+
+    // Send notification email to lead developer
+    try {
+      const leadDevEmail = await getLeadDeveloperEmail(project);
+      if (leadDevEmail) {
+        const subject = `[${project.projectName}] New Developer Joined: ${developerName}`;
+        const message = `Hello,
+
+        A new developer has joined your project '${project.projectName}'!
+        
+        Developer: ${developerName}
+        GitHub Username: ${githubUsername}
+        
+        Best regards,
+        Open Sourcery`;
+
+        await fetch("/api/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            recipients: [leadDevEmail],
+            subject: subject,
+            message: message
+          })});
+      } else {
+        console.warn(`Could not send notification email: lead developer email not found for project ${project.projectName}`);
+      }
+    } catch (emailError) {
+      // Log email error but don't throw - don't break the join flow if email fails
+      console.error('Error sending lead developer notification email:', emailError);
+    }
   } catch (error) {
     console.error('Error joining project:', error);
     throw error;
