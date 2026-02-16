@@ -2,6 +2,7 @@
 
 import { db } from "@firebaseConfig";
 import { doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { sendEmailVerification, User as FirebaseUser } from "firebase/auth";
 import bcryptjs from "bcryptjs";
 import { User } from "@/types/users";
 
@@ -185,6 +186,49 @@ export async function deleteUserProfile(uid: string): Promise<void> {
   } catch (error) {
     console.error("Error deleting user profile:", error);
     throw new Error("Failed to delete user profile");
+  }
+}
+
+/**
+ * Resends verification email to user with rate limiting (1 per 60 seconds)
+ * @param firebaseUser Firebase user to send verification email to
+ * @throws Error if rate limited or if verification email fails
+ */
+export async function resendVerificationEmail(firebaseUser: FirebaseUser): Promise<void> {
+  try {
+    // Check rate limiting - get last send time from Firestore
+    const userRef = doc(db, "users", firebaseUser.uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data() as User;
+      const lastSent = userData.lastVerificationEmailSent;
+      
+      if (lastSent) {
+        const lastSentTime = new Date(lastSent).getTime();
+        const currentTime = new Date().getTime();
+        const secondsElapsed = (currentTime - lastSentTime) / 1000;
+        
+        if (secondsElapsed < 60) {
+          const secondsRemaining = Math.ceil(60 - secondsElapsed);
+          throw new Error(`Please wait ${secondsRemaining} seconds before requesting another verification email`);
+        }
+      }
+    }
+    
+    // Send verification email
+    await sendEmailVerification(firebaseUser);
+    
+    // Update last verification email sent timestamp
+    await updateDoc(userRef, {
+      lastVerificationEmailSent: new Date(),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Please wait")) {
+      throw error;
+    }
+    console.error("Error resending verification email:", error);
+    throw new Error("Failed to resend verification email. Please try again later.");
   }
 }
 

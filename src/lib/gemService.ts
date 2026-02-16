@@ -79,14 +79,14 @@ export async function computeGemCount(uid: string, startDate: Date): Promise<Gem
         if (activity.issues > 0) {
           totalGems += activity.issues * 30;
           actions.push(
-            `Opened ${activity.issues} issue${activity.issues !== 1 ? 's' : ''} in ${repositoryName}`
+            `Opened ${activity.issues} issue${activity.issues !== 1 ? 's' : ''} in '${repositoryName}'`
           );
         }
 
         if (activity.mergedPRs > 0) {
           totalGems += activity.mergedPRs * 30;
           actions.push(
-            `Merged ${activity.mergedPRs} PR${activity.mergedPRs !== 1 ? 's' : ''} in ${repositoryName}`
+            `Merged ${activity.mergedPRs} PR${activity.mergedPRs !== 1 ? 's' : ''} into '${repositoryName}' (your current project)`
           );
         }
       } catch (error) {
@@ -104,7 +104,7 @@ export async function computeGemCount(uid: string, startDate: Date): Promise<Gem
         for (const pr of otherPRs) {
           totalGems += 50;
           const mergedDate = pr.mergedAt ? new Date(pr.mergedAt).toLocaleDateString() : 'unknown date';
-          actions.push(`Merged a PR into ${pr.repo} on ${mergedDate}`);
+          actions.push(`Merged a PR into '${pr.repo}' on ${mergedDate}`);
         }
       } catch (error) {
         console.error('Error fetching other-repo PRs:', error);

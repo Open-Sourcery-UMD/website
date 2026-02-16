@@ -7,6 +7,7 @@ import { ProjectCard } from '@components/ProjectCard';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@context/AuthContext';
 import { getFirestoreProjects, joinProject } from '@/lib/projectService';
+import VerificationGate from '@components/VerificationGate';
 
 export default function TeamMatchingPortalPage() {
   const router = useRouter();
@@ -16,7 +17,6 @@ export default function TeamMatchingPortalPage() {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [error, setError] = useState('');
   const [joiningProjectId, setJoiningProjectId] = useState<string | null>(null);
-  const [joinDisabled, setJoinDisabled] = useState(!!firestoreUser?.currProject);
 
   // Redirect unauthenticated users to login
   if (!loading && !firebaseUser) {
@@ -60,36 +60,38 @@ export default function TeamMatchingPortalPage() {
   };
 
   return (
-    <PageContainer>
-      <SectionContainer>
-        <h1 className="text-4xl md:text-6xl font-semibold mb-12 text-ycs-pink">
-          Team Matching Portal
-        </h1>
+    <VerificationGate>
+      <PageContainer>
+        <SectionContainer>
+          <h1 className="text-4xl md:text-6xl font-semibold mb-12 text-ycs-pink">
+            Team Matching Portal
+          </h1>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
 
-        {loadingProjects ? (
-          <p className="text-neutral-400">Loading projects...</p>
-        ) : projects.length === 0 ? (
-          <p className="text-neutral-400">No projects available yet.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onJoin={handleJoin}
-                joinDisabled={joinDisabled}
-                joining={joiningProjectId === project.id}
-              />
-            ))}
-          </div>
-        )}
-      </SectionContainer>
-    </PageContainer>
+          {loadingProjects ? (
+            <p className="text-neutral-400">Loading projects...</p>
+          ) : projects.length === 0 ? (
+            <p className="text-neutral-400">No projects available yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {projects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onJoin={handleJoin}
+                  joinDisabled={!!firestoreUser?.currProject}
+                  joining={joiningProjectId === project.id}
+                />
+              ))}
+            </div>
+          )}
+        </SectionContainer>
+      </PageContainer>
+    </VerificationGate>
   );
 }

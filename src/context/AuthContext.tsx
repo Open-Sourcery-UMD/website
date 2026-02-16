@@ -18,6 +18,7 @@ type AuthContextType = {
   setFirestoreUser: React.Dispatch<React.SetStateAction<User | null>>;
   loading: boolean;
   error: string | null;
+  emailVerified: boolean;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   setFirestoreUser: () => {},
   loading: true,
   error: null,
+  emailVerified: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firestoreUser, setFirestoreUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -42,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setLoading(true);
       setFirebaseUser(user);
+      setEmailVerified(user?.emailVerified ?? false);
 
       try {
         if (user) {
@@ -53,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setError(null);
         } else {
           setFirestoreUser(null);
+          setEmailVerified(false);
         }
       } catch (err) {
         console.error("Auth error:", err);
@@ -66,9 +71,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // Set up window focus listener to refresh email verification status
+    const handleWindowFocus = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser && isMounted) {
+        try {
+          await currentUser.reload();
+          setEmailVerified(currentUser.emailVerified);
+          setFirebaseUser(currentUser);
+        } catch (err) {
+          console.error("Error refreshing user verification status:", err);
+        }
+      }
+    };
+
+    window.addEventListener("focus", handleWindowFocus);
+
     return () => {
       isMounted = false;
       unsubscribe();
+      window.removeEventListener("focus", handleWindowFocus);
     };
   }, []);
 
@@ -80,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFirestoreUser,
         loading,
         error,
+        emailVerified,
       }}
     >
       {children}

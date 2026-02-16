@@ -12,4 +12,6 @@ export interface User {
   currProject: string;
   eventsAttended: CalendarEvent[];
   lastWarningTime: Date;
+  emailVerified?: boolean;
+  lastVerificationEmailSent?: Date;
 }

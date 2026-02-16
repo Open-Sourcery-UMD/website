@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@firebaseConfig";
 import { useAuth } from "@context/AuthContext";
-import { updateUserProfile } from "@lib/userService";
+import { updateUserProfile, resendVerificationEmail } from "@lib/userService";
 import { getGitHubUser } from "@lib/githubService";
 import { leaveProjectByName } from "@/lib/projectService";
 import { TECHNOLOGIES, TOPICS } from "@data";
@@ -13,6 +13,7 @@ import TextQuestion from "@components/forms/TextQuestion";
 import MultipleChoiceQuestion from "@components/forms/MultipleChoiceQuestion";
 import SelectMultipleQuestion from "@components/forms/SelectMultipleQuestion";
 import SearchSelectQuestion from "@components/forms/SearchSelectQuestion";
+import VerificationGate from "@components/VerificationGate";
 import { User } from "@/types/users";
 
 interface SettingsFormData {
@@ -51,6 +52,8 @@ export default function SettingsPage() {
   const [leavingProject, setLeavingProject] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Initialize form from AuthContext (single source of truth)
   useEffect(() => {
@@ -217,6 +220,27 @@ export default function SettingsPage() {
     }
   };
 
+  const handleResendVerificationEmail = async () => {
+    if (!firebaseUser) return;
+    
+    setResendingEmail(true);
+    setResendMessage(null);
+    try {
+      await resendVerificationEmail(firebaseUser);
+      setResendMessage({
+        type: 'success',
+        text: 'Verification email sent! Please check your inbox.',
+      });
+    } catch (error) {
+      setResendMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to resend verification email',
+      });
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="w-full flex justify-center px-4 py-12">
@@ -228,8 +252,9 @@ export default function SettingsPage() {
   if (!firebaseUser) return null;
 
   return (
-    <div className="w-full flex justify-center px-4 py-12">
-      <div className="w-full max-w-2xl">
+    <VerificationGate>
+      <div className="w-full flex justify-center px-4 py-12">
+        <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-black mb-2">Account Settings</h1>
@@ -254,17 +279,51 @@ export default function SettingsPage() {
         <div className="bg-white rounded-xl p-6 mb-8 shadow-sm border border-gray-100">
           <h2 className="text-2xl font-semibold text-black mb-6">Profile Information</h2>
 
-          {/* Email (Read-only) */}
+          {/* Email (Read-only) with Verification Status */}
           <div className="flex flex-col mb-6 text-black">
             <label className="relative text-m">
-              <div className="flex">
+              <div className="flex items-center gap-2">
                 <span>Email</span>
-                <span className="text-gray-400 text-sm ml-2">(Read-only)</span>
+                <span className="text-gray-400 text-sm">(Read-only)</span>
+                {firebaseUser?.emailVerified ? (
+                  <span className="inline-flex items-center gap-1 text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
+                    ✓ Verified
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                    ⚠ Pending Verification
+                  </span>
+                )}
               </div>
               <div className="mt-1 w-full p-2 rounded-xl border-2 border-gray-300 bg-gray-50 text-gray-600">
                 {firestoreUser?.email || firebaseUser?.email || ""}
               </div>
             </label>
+
+            {!firebaseUser?.emailVerified && (
+              <div className="mt-4">
+                {resendMessage && (
+                  <div
+                    className={`mb-3 p-3 rounded-lg text-sm ${
+                      resendMessage.type === 'success'
+                        ? 'bg-green-100 text-green-800 border border-green-300'
+                        : 'bg-red-100 text-red-800 border border-red-300'
+                    }`}
+                  >
+                    {resendMessage.text}
+                  </div>
+                )}
+                <p className="text-sm text-gray-600 mb-3">
+                  Didn't receive the verification email? <button
+                    onClick={handleResendVerificationEmail}
+                    disabled={resendingEmail}
+                    className="text-ycs-blue hover:underline font-medium disabled:opacity-50"
+                  >
+                    {resendingEmail ? 'Sending...' : 'Click to resend'}
+                  </button>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* First Name */}
@@ -402,5 +461,6 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+    </VerificationGate>
   );
 }
