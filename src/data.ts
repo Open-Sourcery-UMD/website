@@ -1,3 +1,6 @@
+// Start of current semester (Spring 2026)
+export const SEMESTER_START = new Date('2026-01-26');
+
 interface TechnologyGroup {
   header: string,
   technologies: string[]
