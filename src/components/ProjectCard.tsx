@@ -30,12 +30,16 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
 
   const userYear = data.year;
   const [minYear, maxYear] = project.yearRange;
+  const currentYear = new Date().getFullYear();
+  const [minGradYear, maxGradYear] = [currentYear - maxYear + 3, currentYear - minYear + 3]
 
   const isYearMatch =
-    userYear !== null && userYear >= minYear && userYear <= maxYear;
+    userYear !== null && Number(userYear) >= minGradYear && Number(userYear) <= maxGradYear;
 
   const spotsRemaining = project.maxTeamSize - project.currentTeamSize;
   const isFullOrDisabled = spotsRemaining <= 0 || joinDisabled;
+
+  const otherTechnologies = project.technologiesUsed.filter((t) => !project.technologiesRequired.includes(t));
 
   const buttonLabel = joining
     ? 'Joining...'
@@ -76,18 +80,17 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
       </div>
 
       {/* Other Technologies */}
-      <div className="mb-6">
-        <h3 className="text-white font-semibold mb-2">
-          Other Technologies
-        </h3>
-        <div className="grid grid-cols-2 gap-2 text-neutral-300">
-          {project.technologiesUsed
-            .filter((t) => !project.technologiesRequired.includes(t))
-            .map((tech) => (
-              <div key={tech}>{tech}</div>
-            ))}
-        </div>
-      </div>
+      {otherTechnologies.length > 0 &&
+        <div className="mb-6">
+          <h3 className="text-white font-semibold mb-2">
+            Other Technologies
+          </h3>
+          <div className="grid grid-cols-2 gap-2 text-neutral-300">
+            {otherTechnologies.map((tech) => (
+                <div key={tech}>{tech}</div>
+              ))}
+          </div>
+        </div>}
 
       {/* Topics */}
       <div className="flex flex-wrap gap-2 mb-4">

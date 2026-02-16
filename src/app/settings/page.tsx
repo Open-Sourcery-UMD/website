@@ -27,11 +27,12 @@ interface SettingsFormData {
 
 const YEAR_OPTIONS = ["2025", "2026", "2027", "2028", "2029"];
 const ALL_TECHNOLOGIES = TECHNOLOGIES.flatMap((g) => g.technologies);
-const ALL_TOPICS = TOPICS.flatMap((g) => g.topics);
+const ALL_TOPICS = TOPICS.flatMap((g) => g.topics).sort();
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { firebaseUser, firestoreUser, loading } = useAuth();
+
+  const { firebaseUser, firestoreUser, setFirestoreUser, loading } = useAuth();
 
   const [formData, setFormData] = useState<SettingsFormData>({
     firstName: "",
@@ -43,27 +44,33 @@ export default function SettingsPage() {
     preferredTopics: [],
   });
 
-  const [originalData, setOriginalData] = useState<SettingsFormData | null>(null);
+  const [originalData, setOriginalData] =
+    useState<SettingsFormData | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [leavingProject, setLeavingProject] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Initialize form with user data
+  // Initialize form from AuthContext (single source of truth)
   useEffect(() => {
     if (!loading && !firebaseUser) {
-      // Redirect unauthenticated users to sign-up
       router.push("/sign-up");
-    } else if (firestoreUser) {
+      return;
+    }
+
+    if (firestoreUser) {
       const initialData: SettingsFormData = {
         firstName: firestoreUser.firstName || "",
         lastName: firestoreUser.lastName || "",
         gitHubUsername: firestoreUser.gitHubUsername || "",
         discordUsername: firestoreUser.discordUsername || "",
         graduationYear: firestoreUser.graduationYear || "",
-        technologiesExperiencedWith: firestoreUser.technologiesExperiencedWith || [],
+        technologiesExperiencedWith:
+          firestoreUser.technologiesExperiencedWith || [],
         preferredTopics: firestoreUser.preferredTopics || [],
       };
+
       setFormData(initialData);
       setOriginalData(initialData);
     }
@@ -102,6 +109,7 @@ export default function SettingsPage() {
       setErrorMessage("You can select a maximum of 20 topics.");
       return false;
     }
+
     return true;
   };
 
@@ -109,10 +117,7 @@ export default function SettingsPage() {
     setErrorMessage("");
     setSuccessMessage("");
 
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     if (!firebaseUser) {
       setErrorMessage("User not authenticated.");
       return;
@@ -121,31 +126,38 @@ export default function SettingsPage() {
     setSubmitting(true);
 
     try {
-      // Prepare data to update
       const updateData: Partial<User> = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         gitHubUsername: formData.gitHubUsername,
         discordUsername: formData.discordUsername,
         graduationYear: formData.graduationYear,
-        technologiesExperiencedWith: formData.technologiesExperiencedWith,
+        technologiesExperiencedWith:
+          formData.technologiesExperiencedWith,
         preferredTopics: formData.preferredTopics,
       };
 
       await updateUserProfile(firebaseUser.uid, updateData);
 
-      // Update original data to reflect saved state
+      setFirestoreUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...updateData,
+            }
+          : prev
+      );
+
       setOriginalData(formData);
 
-      // Show success message
       setSuccessMessage("Changes saved successfully!");
-
-      // Auto-hide success message after 3 seconds
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error updating profile:", error);
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to save changes. Please try again."
+        error instanceof Error
+          ? error.message
+          : "Failed to save changes. Please try again."
       );
     } finally {
       setSubmitting(false);
@@ -172,15 +184,23 @@ export default function SettingsPage() {
     setErrorMessage("");
 
     try {
-      await leaveProjectByName(firebaseUser.uid, firestoreUser.currProject);
+      await leaveProjectByName(
+        firebaseUser.uid,
+        firestoreUser.currProject
+      );
+
+      setFirestoreUser((prev) =>
+        prev ? { ...prev, currProject: "" } : prev
+      );
+
       setSuccessMessage("You have left the project.");
       setTimeout(() => setSuccessMessage(""), 3000);
-      // Force page reload to refresh firestoreUser
-      window.location.reload();
     } catch (error) {
       console.error("Error leaving project:", error);
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to leave project."
+        error instanceof Error
+          ? error.message
+          : "Failed to leave project."
       );
     } finally {
       setLeavingProject(false);
@@ -190,28 +210,22 @@ export default function SettingsPage() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setTimeout(() => router.push("/"), 10);
+      router.push("/");
     } catch (error) {
       console.error("Error signing out:", error);
       setErrorMessage("Failed to sign out. Please try again.");
     }
   };
 
-  // Show loading state while auth initializes
   if (loading) {
     return (
       <div className="w-full flex justify-center px-4 py-12">
-        <div className="text-center">
-          <p className="text-gray-600">Loading...</p>
-        </div>
+        <p className="text-gray-600">Loading...</p>
       </div>
     );
   }
 
-  // Don't render if not authenticated (redirect happens in useEffect)
-  if (!firebaseUser) {
-    return null;
-  }
+  if (!firebaseUser) return null;
 
   return (
     <div className="w-full flex justify-center px-4 py-12">

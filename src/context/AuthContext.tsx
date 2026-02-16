@@ -6,7 +6,6 @@ import {
   useEffect,
   useState,
   ReactNode,
-  useRef,
 } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@firebaseConfig";
@@ -16,6 +15,7 @@ import { User } from "@/types/users";
 type AuthContextType = {
   firebaseUser: FirebaseUser | null;
   firestoreUser: User | null;
+  setFirestoreUser: React.Dispatch<React.SetStateAction<User | null>>;
   loading: boolean;
   error: string | null;
 };
@@ -23,6 +23,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   firebaseUser: null,
   firestoreUser: null,
+  setFirestoreUser: () => {},
   loading: true,
   error: null,
 });
@@ -32,20 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firestoreUser, setFirestoreUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const initializedRef = useRef(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!isMounted) return;
+
+      setLoading(true);
       setFirebaseUser(user);
 
       try {
-        if (user && !initializedRef.current) {
-          initializedRef.current = true;
-        }
-
-        // Fetch Firestore user profile if Firebase user exists
         if (user) {
           const userProfile = await getUserProfile(user.uid);
+
+          if (!isMounted) return;
+
           setFirestoreUser(userProfile);
           setError(null);
         } else {
@@ -53,18 +56,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.error("Auth error:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     });
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ firebaseUser, firestoreUser, loading, error }}
+      value={{
+        firebaseUser,
+        firestoreUser,
+        setFirestoreUser,
+        loading,
+        error,
+      }}
     >
       {children}
     </AuthContext.Provider>
@@ -72,5 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return ctx;
 }

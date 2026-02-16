@@ -14,6 +14,7 @@ import MultipleChoiceQuestion from "@components/forms/MultipleChoiceQuestion";
 import SelectMultipleQuestion from "@components/forms/SelectMultipleQuestion";
 import SearchSelectQuestion from "@components/forms/SearchSelectQuestion";
 import { User } from "@/types/users";
+import { useTeamMatching } from "@context/TeamMatchingContext";
 
 interface SignUpFormData {
   email: string;
@@ -50,6 +51,8 @@ export default function SignUpPage() {
     technologiesExperiencedWith: [],
     preferredTopics: [],
   });
+
+  const { setData } = useTeamMatching();
 
   // Validation functions
   const validateEmail = (email: string): boolean => {
@@ -172,6 +175,12 @@ export default function SignUpPage() {
       );
 
       await createUserProfile(userCredential.user.uid, userData);
+
+      setData({
+        year: formData.graduationYear,
+        technologies: formData.technologiesExperiencedWith,
+        topics: formData.preferredTopics,
+      });
 
       // Send email verification
       await sendEmailVerification(userCredential.user);
