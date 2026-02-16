@@ -162,7 +162,7 @@ const ProjectProposalPage = () => {
           Max. Team Size: ${maxTeamSize}
 
           If this project seems reasonable, please complete the following steps:
-            1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics.
+            1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics, and the Apache-2.0 license.
             2. Ensure @${firestoreUser.gitHubUsername} has been granted write access to the UMD Open Sourcery GitHub organization.
             3. Email ${firebaseUser.email} to inform them that their project's repository has been created, and to schedule an onboarding meeting.
             4. Update @${firestoreUser.discordUsername}'s Discord roles to include "Lead Developer" and "Developer".
