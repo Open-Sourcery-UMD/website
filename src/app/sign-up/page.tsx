@@ -285,7 +285,7 @@ export default function SignUpPage() {
             />
 
             <TextQuestion
-              question="GitHub Username"
+              question="GitHub Username (MAKE SURE THIS IS ACCURATE, as we'll use it to send you organization/repository invites)"
               placeholder="Enter your GitHub username"
               maxLength={39}
               isRequired={true}

@@ -1,6 +1,6 @@
 import { db } from "./lib/firebase-admin";
 import { sendEmail } from "../src/lib/emailService";
-import { getUserCommitsSince } from "../src/lib/githubService";
+import { getUserCommitsSince } from "../src/lib/githubApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;

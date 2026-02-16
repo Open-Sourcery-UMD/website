@@ -71,7 +71,7 @@ export default function GemsPage() {
               <p className="text-zinc-500 text-lg">Loading...</p>
             ) : (
               <>
-                <p className="text-white text-7xl md:text-9xl font-bold mb-8">
+                <p className="text-green-300 text-7xl md:text-9xl font-bold mb-8">
                   {totalGems}
                 </p>
 

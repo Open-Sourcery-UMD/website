@@ -210,7 +210,7 @@ export default function SettingsPage() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      router.push("/");
+      setTimeout(() => router.push("/"), 10);
     } catch (error) {
       console.error("Error signing out:", error);
       setErrorMessage("Failed to sign out. Please try again.");
