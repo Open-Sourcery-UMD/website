@@ -151,7 +151,7 @@ const ProjectProposalPage = () => {
           message: `
           Dear Open Sourcery Team,
 
-          The following project proposal was submitted via the Open Sourcery Website on ${new Date().toLocaleString()} by ${firebaseUser.email}:
+          The following project proposal was submitted via the Open Sourcery Website on ${new Date().toLocaleString()} by ${firestoreUser.firstName} ${firestoreUser.lastName} (${firebaseUser.email}):
 
           Project Name: ${projectName}
           Description: ${description}
