@@ -84,7 +84,6 @@ export default function TeamMatchingPortalPage() {
                 project={project}
                 onJoin={handleJoin}
                 joinDisabled={joinDisabled}
-                setJoinDisabled={setJoinDisabled}
                 joining={joiningProjectId === project.id}
               />
             ))}
