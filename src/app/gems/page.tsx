@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { PageContainer, SectionContainer } from '@components/Container';
 import { useAuth } from '@context/AuthContext';
 import { computeGemCount } from '@/lib/gemService';
+import { SEMESTER_START } from '@data';
+import GemLeaderboard from '@components/GemLeaderboard';
 
 const ITEMS_PER_PAGE = 10;
 const SPECIAL_EVENT_NAMES = ['hack session', 'gbm', 'general body meeting'];
@@ -21,9 +23,6 @@ function getGemAmount(action: string): number {
   }
   return 0;
 }
-
-// Start of current semester (Spring 2026)
-const SEMESTER_START = new Date('2026-01-26');
 
 export default function GemsPage() {
   const { firebaseUser, emailVerified, loading: authLoading } = useAuth();
@@ -131,6 +130,14 @@ export default function GemsPage() {
             </p>
           </div>
         )}
+
+        {/* Top Performers Leaderboard */}
+        <div className="mb-16">
+          <h2 className="text-white text-3xl md:text-4xl font-bold mb-8">
+            Leaderboard
+          </h2>
+          <GemLeaderboard />
+        </div>
 
         {/* Two Ways to Earn Gems */}
         <h2 className="text-white text-3xl md:text-4xl font-bold mb-8">
