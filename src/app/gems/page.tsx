@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { PageContainer, SectionContainer } from '@components/Container';
 import { useAuth } from '@context/AuthContext';
-import { useEvents } from '@context/EventContext';
 import { computeGemCount } from '@/lib/gemService';
 
 const ITEMS_PER_PAGE = 10;
@@ -27,7 +26,7 @@ function getGemAmount(action: string): number {
 const SEMESTER_START = new Date('2026-01-26');
 
 export default function GemsPage() {
-  const { firebaseUser, loading: authLoading } = useAuth();
+  const { firebaseUser, emailVerified, loading: authLoading } = useAuth();
 
   const [totalGems, setTotalGems] = useState(0);
   const [actions, setActions] = useState<string[]>([]);
@@ -64,7 +63,7 @@ export default function GemsPage() {
       <SectionContainer>
         <h1 className="text-white text-5xl md:text-7xl font-bold mb-4">Gems</h1>
         {/* Gem Count Section */}
-        {firebaseUser && (
+        {firebaseUser && emailVerified && (
           <div className="mb-16">
             <p className="text-zinc-400 text-2xl mb-2">You have:</p>
             {loadingGems ? (
@@ -119,6 +118,17 @@ export default function GemsPage() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {firebaseUser && !emailVerified && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-16">
+            <p className="text-yellow-800 font-medium mb-2">
+              ⚠️ Verify your email to see your gems
+            </p>
+            <p className="text-yellow-700 text-sm">
+              Please verify your email address to unlock and view your gem count. You'll be able to track your progress once your email is verified.
+            </p>
           </div>
         )}
 

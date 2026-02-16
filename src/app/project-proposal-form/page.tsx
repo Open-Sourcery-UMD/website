@@ -13,6 +13,7 @@ import SelectMultipleQuestion from '@components/forms/SelectMultipleQuestion';
 import SearchSelectQuestion from '@components/forms/SearchSelectQuestion';
 import { createProjectProposal } from '@/lib/projectService';
 import MultipleChoiceQuestion from '@components/forms/MultipleChoiceQuestion';
+import VerificationGate from '@components/VerificationGate';
 
 const YEAR_LABELS = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Grad Student'];
 const TOPICS_MAX = 20;
@@ -193,15 +194,16 @@ const ProjectProposalPage = () => {
   };
 
   return (
-    <div className="w-full flex justify-center px-4 py-12">
-      <div className="w-full max-w-2xl flex flex-col">
-        <FormHeader
-          title="Project Proposal"
-          confirmationPage={currentPage === 4}
-          currPage={currentPage}
-          pageCount={PAGE_COUNT}
-          sectionLabels={SECTION_LABELS}
-        />
+    <VerificationGate>
+      <div className="w-full flex justify-center px-4 py-12">
+        <div className="w-full max-w-2xl flex flex-col">
+          <FormHeader
+            title="Project Proposal"
+            confirmationPage={currentPage === 4}
+            currPage={currentPage}
+            pageCount={PAGE_COUNT}
+            sectionLabels={SECTION_LABELS}
+          />
 
         {/* Page 1: Project Info */}
         {currentPage === 1 && (
@@ -362,6 +364,7 @@ const ProjectProposalPage = () => {
         )}
       </div>
     </div>
+    </VerificationGate>
   );
 };
 
