@@ -60,17 +60,6 @@ export default function GemLeaderboard() {
           for (let i = 1; i < users.length && topUsers.length < 5; i++) {
             topUsers.push(users[i]);
           }
-          // Include all users tied at 5th place
-          if (topUsers.length >= 5 && users.length > 5) {
-            const fifthPlaceGems = topUsers[4].gems;
-            for (let i = 5; i < users.length; i++) {
-              if (users[i].gems === fifthPlaceGems) {
-                topUsers.push(users[i]);
-              } else {
-                break;
-              }
-            }
-          }
         }
 
         setLeaderboardData(topUsers);
