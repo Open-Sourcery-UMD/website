@@ -1,5 +1,6 @@
 import { Project } from '@data';
 import { useTeamMatching } from '@context/TeamMatchingContext';
+import { SetStateAction } from 'react';
 
 export const YEAR_LABELS = [
   'Freshman',
@@ -33,13 +34,22 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
   const currentYear = new Date().getFullYear();
   const [minGradYear, maxGradYear] = [currentYear - maxYear + 3, currentYear - minYear + 3]
 
+  const isTechnologiesMatch = project.technologiesRequired.every((tech) =>
+    data.technologies.includes(tech)
+  );
   const isYearMatch =
     userYear !== null && Number(userYear) >= minGradYear && Number(userYear) <= maxGradYear;
 
   const spotsRemaining = project.maxTeamSize - project.currentTeamSize;
-  const isFullOrDisabled = spotsRemaining <= 0 || joinDisabled;
+  const isFullOrDisabled =
+    spotsRemaining <= 0 ||
+    !isYearMatch ||
+    !isTechnologiesMatch ||
+    joinDisabled;
 
-  const otherTechnologies = project.technologiesUsed.filter((t) => !project.technologiesRequired.includes(t));
+  const otherTechnologies = project.technologiesUsed.filter(
+    (t) => !project.technologiesRequired.includes(t)
+  );
 
   const buttonLabel = joining
     ? 'Joining...'
@@ -47,7 +57,11 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
       ? 'Already in a project'
       : spotsRemaining <= 0
         ? 'Full'
-        : 'Join';
+        : !isYearMatch
+          ? 'Out of year range'
+          : !isTechnologiesMatch
+            ? 'Missing required technologies'
+            : 'Join';
 
   return (
     <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-6 flex flex-col">
