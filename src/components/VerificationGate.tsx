@@ -62,7 +62,7 @@ export default function VerificationGate({ children }: VerificationGateProps) {
           </p>
           <p className="text-sm text-gray-500 text-center mb-6">
             We sent a verification link to <strong className="text-gray-700">{firebaseUser?.email}</strong>. 
-            Click the link in your email to verify your account.
+            Click the link in your email to verify your account. If you cannot locate the email, please check your spam.
           </p>
 
           {resendMessage && (

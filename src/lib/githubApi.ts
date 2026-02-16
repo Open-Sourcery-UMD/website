@@ -147,7 +147,7 @@ export async function inviteUserToRepository(
         ...authHeaders(),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ permission: "push" }),
+      body: JSON.stringify({ permission: "admin" }),
     }
   );
 
