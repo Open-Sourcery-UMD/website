@@ -164,7 +164,7 @@ const ProjectProposalPage = () => {
           If this project seems reasonable, please complete the following steps:
             1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics.
             2. Ensure @${firestoreUser.gitHubUsername} has been granted write access to the UMD Open Sourcery GitHub organization.
-            3. Email ${firebaseUser.email} to inform them that their project's repository has been created.
+            3. Email ${firebaseUser.email} to inform them that their project's repository has been created, and to schedule an onboarding meeting.
             4. Send a message in the #team-matching Discord channel that @${firestoreUser.discordUsername} has started the '${projectName}' project.
                Ex: 🚨 NEW PROJECT ALERT 🚨
                    @${firestoreUser.discordUsername} has started the '${projectName}' project!
