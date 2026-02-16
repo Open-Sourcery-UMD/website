@@ -11,11 +11,10 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { Project } from '@/data';
-import { getOrganizationRepositories, inviteUserToRepository } from './githubService';
+import { getOrganizationRepositories, getRepositoryTeamMembers, inviteUserToRepository } from './githubService';
 import { updateUserProfile } from './userService';
 
 const PROJECTS_COLLECTION = 'projects';
-const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || 'Open-Sourcery-UMD';
 
 /**
  * Converts a project name to a valid GitHub repository name
@@ -75,7 +74,7 @@ export async function getFirestoreProjects(): Promise<Project[]> {
     // Get list of valid GitHub repositories
     let validRepos: string[] = [];
     try {
-      validRepos = await getOrganizationRepositories(GITHUB_ORG);
+      validRepos = await getOrganizationRepositories();
     } catch (error) {
       console.error('Error fetching GitHub repos, using all Firestore projects:', error);
       // Continue without GitHub validation if API fails
@@ -95,7 +94,7 @@ export async function getFirestoreProjects(): Promise<Project[]> {
 
       try {
         // Update currentTeamSize from GitHub
-        const teamMembers = await fetch(`/api/github?repo=${repositoryName}`).then(res => res.json());
+        const teamMembers = await getRepositoryTeamMembers(repositoryName);
         const teamSize = teamMembers.length;
 
         projects.push({
@@ -194,10 +193,8 @@ export async function updateProjectTeamSize(projectId: string): Promise<number> 
     const repositoryName = projectData.repositoryName;
 
     // Get team members from GitHub
-    const teamMembers = await fetch(`/api/github?repo=${repositoryName}`).then(res => res.json());
+    const teamMembers = await getRepositoryTeamMembers(repositoryName);
     const teamSize = teamMembers.length;
-
-    console.log(teamMembers);
 
     // Update Firestore
     await updateDoc(docRef, { currentTeamSize: teamSize });
@@ -242,7 +239,7 @@ export async function joinProject(
     }
 
     // Send GitHub invite to repository
-    await inviteUserToRepository(githubUsername, GITHUB_ORG, project.repositoryName);
+    await inviteUserToRepository(githubUsername, project.repositoryName);
 
     // Update user's currProject
     await updateUserProfile(uid, { currProject: project.projectName });

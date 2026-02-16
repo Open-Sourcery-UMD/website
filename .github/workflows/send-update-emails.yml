@@ -1,0 +1,31 @@
+name: Send Update Emails
+
+on:
+  schedule:
+    # 9:15 AM EST = 14:15 UTC, Monday-Friday
+    - cron: '15 14 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  send-warning-emails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run warning emails script
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
+          NEXT_PUBLIC_GITHUB_ORG: ${{ vars.GH_ORG || 'Open-Sourcery-UMD' }}
+        run: npx tsx scripts/send-warning-emails.ts

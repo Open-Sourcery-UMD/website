@@ -59,6 +59,30 @@ const config: Config = {
         'ycs-green': '#39A393',
         'ycs-security-red': '#890c0c',
         'ycs-gray': '#323844',
+        'sparkle-gold': '#FFD700',
+      },
+      keyframes: {
+        sparkle: {
+          '0%': {
+            boxShadow: '0 0 20px 2px rgba(255, 215, 0, 0.8), inset 0 0 20px 2px rgba(255, 215, 0, 0.4)',
+            '--tw-border-opacity': '0.8',
+          },
+          '25%': {
+            boxShadow: '0 0 30px 4px rgba(255, 215, 0, 0.9), inset 0 0 15px 2px rgba(255, 215, 0, 0.5)',
+          },
+          '50%': {
+            boxShadow: '0 0 20px 2px rgba(255, 215, 0, 0.7), inset 0 0 20px 2px rgba(255, 215, 0, 0.3)',
+          },
+          '75%': {
+            boxShadow: '0 0 30px 4px rgba(255, 215, 0, 0.9), inset 0 0 15px 2px rgba(255, 215, 0, 0.5)',
+          },
+          '100%': {
+            boxShadow: '0 0 20px 2px rgba(255, 215, 0, 0.8), inset 0 0 20px 2px rgba(255, 215, 0, 0.4)',
+          },
+        },
+      },
+      animation: {
+        sparkle: 'sparkle 2.5s ease-in-out infinite',
       },
       fontSize: {
         big: '200px',
