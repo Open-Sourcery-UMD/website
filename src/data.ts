@@ -8,7 +8,10 @@ interface TopicGroup {
   topics: string[]
 }
 
+type projectStatus = 'PROPOSED' | 'IN_PROGRESS';
+
 export interface Project {
+  id: string;
   projectName: string;
   description: string;
   yearRange: [number, number];
@@ -17,30 +20,11 @@ export interface Project {
   topics: string[];
   maxTeamSize: number;
   currentTeamSize: number;
+  repositoryName: string;
+  createdBy: string;
+  createdAt: Date;
+  status: projectStatus;
 }
-
-export const DUMMY_PROJECTS: Project[] = [
-  {
-    projectName: 'campus-map',
-    description: 'An interactive map to help students navigate campus.',
-    yearRange: [1, 3], // Sophomore – Senior
-    technologiesUsed: ['React', 'Next.js', 'Java'],
-    technologiesRequired: ['React', 'TypeScript'],
-    topics: ['education', 'java', 'accessibility'],
-    maxTeamSize: 7,
-    currentTeamSize: 2,
-  },
-  {
-    projectName: 'study-group-finder',
-    description: 'Match students into study groups based on classes.',
-    yearRange: [0, 4], // Freshman – Grad
-    technologiesUsed: ['Node.js', 'PostgreSQL', 'Express'],
-    technologiesRequired: ['Node.js'],
-    topics: ['education', 'java', 'productivity'],
-    maxTeamSize: 5,
-    currentTeamSize: 4,
-  },
-];
 
 export const TECHNOLOGIES: TechnologyGroup[] = [
   {

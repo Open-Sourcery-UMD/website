@@ -1,23 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { GoArrowUpRight } from "react-icons/go";
-
-interface CalendarEvent {
-  id: string;
-  summary: string;
-  description?: string;
-  location?: string;
-  start: {
-    date?: string;
-    dateTime?: string;
-  };
-  end: {
-    date?: string;
-    dateTime?: string;
-  };
-}
+import { useEvents } from "@/context/EventContext";
+import { CalendarEvent } from "@/types/events";
 
 function formatTime(dateString: string) {
   return new Date(dateString).toLocaleTimeString(undefined, {
@@ -27,8 +13,7 @@ function formatTime(dateString: string) {
 }
 
 export default function EventsCalendar() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { events, loading, error } = useEvents();
 
   const calendarLink = "https://calendar.google.com/calendar/u/2?cid=NWI3YTU4NDA0YzJhZjFkNzkzZGJlNjE1ZGI1MThlYzdkZWI5OWFmOTIyYTRlZjUwNmE2NTNhNDdjMzEzNDFkNkBncm91cC5jYWxlbmRhci5nb29nbGUuY29t";
 
@@ -36,26 +21,18 @@ export default function EventsCalendar() {
   const hoverGradient = 'hover:from-ycs-pink/30';
   const borderColor = 'border-ycs-pink';
 
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const res = await fetch("/api/events");
-        const data = await res.json();
-        setEvents(data);
-      } catch (err) {
-        console.error("Failed to load events", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchEvents();
-  }, []);
-
   if (loading) {
     return (
       <div className="flex justify-center py-12 text-gray-500">
         Loading events…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12 text-red-500">
+        Failed to load events. Please try again later.
       </div>
     );
   }

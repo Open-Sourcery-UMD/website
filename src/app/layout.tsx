@@ -5,9 +5,11 @@ import '@styles/globals.css';
 // import localFont from "next/font/local";
 
 import Navbar from '@components/Navbar';
+import EventBar from '@components/EventBar';
 import { Footer } from '@components/Footer';
 import { AuthProvider } from '@context/AuthContext';
 import { TeamMatchingProvider } from '@context/TeamMatchingContext';
+import { EventProvider } from '@context/EventContext';
 
 // const inter = Inter({ subsets: ["latin"] });
 const dmSans = DM_Sans({
@@ -35,9 +37,12 @@ export default function RootLayout({
       <body className={`  bg-[#000000] text-white ${dmSans.className}`}>
         <AuthProvider>
           <TeamMatchingProvider>
-            <Navbar />
-            {children}
-            <Footer />
+            <EventProvider>
+              <Navbar />
+              <EventBar />
+              {children}
+              <Footer />
+            </EventProvider>
           </TeamMatchingProvider>
         </AuthProvider>
       </body>

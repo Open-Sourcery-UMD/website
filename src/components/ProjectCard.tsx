@@ -18,7 +18,14 @@ export const formatYearRange = (min: number, max: number) => {
   return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
 };
 
-export const ProjectCard = ({ project }: { project: Project }) => {
+interface ProjectCardProps {
+  project: Project;
+  onJoin?: (project: Project) => void;
+  joinDisabled?: boolean;
+  joining?: boolean;
+}
+
+export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectCardProps) => {
   const { data } = useTeamMatching();
 
   const userYear = data.year;
@@ -28,6 +35,15 @@ export const ProjectCard = ({ project }: { project: Project }) => {
     userYear !== null && userYear >= minYear && userYear <= maxYear;
 
   const spotsRemaining = project.maxTeamSize - project.currentTeamSize;
+  const isFullOrDisabled = spotsRemaining <= 0 || joinDisabled;
+
+  const buttonLabel = joining
+    ? 'Joining...'
+    : joinDisabled
+      ? 'Already in a project'
+      : spotsRemaining <= 0
+        ? 'Full'
+        : 'Join';
 
   return (
     <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-6 flex flex-col">
@@ -113,14 +129,15 @@ export const ProjectCard = ({ project }: { project: Project }) => {
 
       {/* Join Button */}
       <button
-        disabled={spotsRemaining <= 0}
+        disabled={isFullOrDisabled || joining}
+        onClick={() => onJoin?.(project)}
         className={`mt-auto w-full py-3 rounded font-semibold transition ${
-          spotsRemaining > 0
-            ? 'bg-ycs-pink text-black hover:opacity-90'
+          !isFullOrDisabled && !joining
+            ? 'bg-ycs-pink text-black hover:opacity-90 cursor-pointer'
             : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
         }`}
       >
-        Join
+        {buttonLabel}
       </button>
     </div>
   );

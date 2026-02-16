@@ -117,7 +117,7 @@ const Home = () => {
             title="Join an ongoing project"
             color="blue"
             text="Enter our team matching portal to join our community of Developers and help build awesome open-source software on a project team."
-            link="/team-matching-portal/form"
+            link="/team-matching-portal"
             label="Join a Project"
             icon={
               <svg

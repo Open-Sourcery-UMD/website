@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { NavbarMobileMenu } from './NavbarMobileMenu';
-import SignInButton from './SignInButton';
+import NavbarIcon from './NavbarIcon';
 
 export const navigationItems = [
   { name: 'Home',
@@ -14,7 +14,7 @@ export const navigationItems = [
     color: 'white',
     subItems: [
       { name: 'Start a project', link: '/project-proposal-form' },
-      { name: 'Join a project', link: '/team-matching-portal/form'}
+      { name: 'Join a project', link: '/team-matching-portal'}
     ],
   },
   {
@@ -53,9 +53,9 @@ function Navbar() {
         ) : (
           <ul className="flex gap-12 text-lg">
             {navigationItems.map((item, index) => (
-              <li
+              <div
                 key={index}
-                className="relative"
+                className="relative group"
                 onMouseEnter={() => item.subItems && setActiveDropdown(item.name)}
                 onMouseLeave={() => setActiveDropdown(null)}
               >
@@ -67,19 +67,22 @@ function Navbar() {
                   {item.name}
                 </Link>
                 {item.subItems && activeDropdown === item.name && (
-                  <ul className="absolute left-0 mt-2 bg-black py-2 rounded-md">
+                  <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg z-50 py-2">
                     {item.subItems.map((subItem, subIndex) => (
                       <li key={subIndex}>
-                        <Link href={subItem.link} className="block px-4 py-2 hover:bg-gray-800">
+                        <Link
+                          href={subItem.link}
+                          className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition-colors"
+                        >
                           {subItem.name}
                         </Link>
                       </li>
                     ))}
-                  </ul>
+                  </div>
                 )}
-              </li>
+              </div>
             ))}
-            <SignInButton />
+            <NavbarIcon />
           </ul>
         )}
       </nav>
