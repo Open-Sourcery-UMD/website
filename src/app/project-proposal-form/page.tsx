@@ -1,25 +1,22 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { PageContainer, SectionContainer } from '@components/Container';
+import { useState, useMemo, useEffect } from 'react';
 import { TECHNOLOGIES, TOPICS } from '@data';
 import { useAuth } from '@context/AuthContext';
 import { useRouter } from 'next/navigation';
-
-interface ProposalData {
-  projectName: string;
-  description: string;
-  yearRange: [number, number];
-  technologiesUsed: string[];
-  technologiesRequired: string[];
-  topics: string[];
-  maxTeamSize: number;
-}
+import FormHeader from '@components/forms/FormHeader';
+import FormSection from '@components/forms/FormSection';
+import TextQuestion from '@components/forms/TextQuestion';
+import TextareaQuestion from '@components/forms/TextareaQuestion';
+import SliderQuestion from '@components/forms/SliderQuestion';
+import SelectMultipleQuestion from '@components/forms/SelectMultipleQuestion';
+import SearchSelectQuestion from '@components/forms/SearchSelectQuestion';
+import { createProjectProposal } from '@/lib/projectService';
+import MultipleChoiceQuestion from '@components/forms/MultipleChoiceQuestion';
 
 const YEAR_LABELS = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Grad Student'];
-const GITHUB_REPO_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const YEAR_MAX = 4;
 const TOPICS_MAX = 20;
+const GITHUB_REPO_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const formatYearRange = (min: number, max: number) => {
   if (min === max) {
@@ -30,363 +27,337 @@ const formatYearRange = (min: number, max: number) => {
   return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
 };
 
+const PAGE_COUNT = 4;
+const SECTION_LABELS = ['Project Info', 'Team Settings', 'Technologies & Topics', 'Confirmation'];
+
 const ProjectProposalPage = () => {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { firebaseUser, loading } = useAuth();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
-  const [yearMin, setYearMin] = useState(1);
-  const [yearMax, setYearMax] = useState(3);
+  const [yearMin, setYearMin] = useState(0);
+  const [yearMax, setYearMax] = useState(4);
   const [technologiesUsed, setTechnologiesUsed] = useState<string[]>([]);
   const [technologiesRequired, setTechnologiesRequired] = useState<string[]>([]);
   const [topics, setTopics] = useState<string[]>([]);
-  const [topicInput, setTopicInput] = useState('');
   const [maxTeamSize, setMaxTeamSize] = useState(6);
 
-  const isProjectNameValid = useMemo(
-    () => GITHUB_REPO_REGEX.test(projectName),
-    [projectName]
-  );
+  const minYearOptions = YEAR_LABELS;
+  const maxYearOptions = YEAR_LABELS.slice(yearMin);
 
-  const allTopics = useMemo(
-    () => TOPICS.flatMap((group) => group.topics),
+  useEffect(() => {
+    if (!loading && !firebaseUser) {
+      router.push('/log-in');
+    }
+  }, [loading, firebaseUser, router]);
+
+  const allTechnologies = useMemo(
+    () => TECHNOLOGIES.flatMap((group) => group.technologies),
     []
   );
 
-  const filteredTopics = useMemo(
-    () =>
-      allTopics.filter(
-        (t) =>
-          t.toLowerCase().includes(topicInput.toLowerCase()) &&
-          !topics.includes(t)
-      ),
-    [topicInput, topics, allTopics]
+  const allTopics = useMemo(
+    () => TOPICS.flatMap((group) => group.topics).sort((a, b) => a.localeCompare(b)),
+    []
   );
 
-  const yearLabel = formatYearRange(yearMin, yearMax);
+  if (loading || !firebaseUser) {
+    return null;
+  }
 
-  const minPercent = (yearMin / YEAR_MAX) * 100;
-  const maxPercent = (yearMax / YEAR_MAX) * 100;
-
-  const toggleTechnologyUsed = (tech: string) => {
-    setTechnologiesUsed((prev) =>
-      prev.includes(tech)
-        ? prev.filter((t) => t !== tech)
-        : [...prev, tech]
-    );
-    setTechnologiesRequired((prev) => prev.filter((t) => t !== tech));
-  };
-
-  const toggleTechnologyRequired = (tech: string) => {
-    setTechnologiesRequired((prev) =>
-      prev.includes(tech)
-        ? prev.filter((t) => t !== tech)
-        : [...prev, tech]
-    );
-  };
-
-  const addTopic = (topic: string) => {
-    setTopics((prev) => [...prev, topic]);
-    setTopicInput('');
-  };
-
-  const submitProposal = async () => {
-    const data: ProposalData = {
-      projectName,
-      description,
-      yearRange: [yearMin, yearMax],
-      technologiesUsed,
-      technologiesRequired,
-      topics,
-      maxTeamSize,
-    };
-
-    if (loading || !user || !user.email) {
-      return;
+  const validatePage0 = (): boolean => {
+    if (!projectName.trim()) {
+      setErrorMessage('Project name is required.');
+      return false;
     }
+    if (!GITHUB_REPO_REGEX.test(projectName)) {
+      setErrorMessage('Must be a valid GitHub repository name (lowercase letters, numbers, and hyphens only).');
+      return false;
+    }
+    if (description.length < 10) {
+      setErrorMessage('Description must be at least 10 characters.');
+      return false;
+    }
+    return true;
+  };
 
-    await fetch("/api/email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        recipients: ["Open Sourcery <umdopensourcery@gmail.com>"],
-        subject: `[ACTION REQUIRED] A new project proposal has been submitted: ${projectName}`,
-        message: `
-        Dear Open Sourcery Team,
+  const validatePage1 = (): boolean => {
+    if (yearMin > yearMax) {
+      setErrorMessage('Minimum year cannot be greater than maximum year.');
+      return false;
+    }
+    return true;
+  };
 
-        The following project proposal was submitted via the Open Sourcery Website on ${new Date().toLocaleString()} by ${user.email}:
+  const validatePage2 = (): boolean => {
+    if (technologiesUsed.length === 0) {
+      setErrorMessage('Select at least one technology used.');
+      return false;
+    }
+    if (technologiesRequired.length === 0) {
+      setErrorMessage('Select at least one required technology.');
+      return false;
+    }
+    if (topics.length === 0) {
+      setErrorMessage('Select at least one topic.');
+      return false;
+    }
+    return true;
+  };
 
-        Project Name: ${data.projectName}
-        Description: ${data.description}
-        Year Range: ${formatYearRange(data.yearRange[0], data.yearRange[1])}
-        Technologies Used: ${data.technologiesUsed}
-        Technologies Required: ${data.technologiesRequired}
-        Topics: ${data.topics}
-        Max. Team Size: ${data.maxTeamSize}
+  const handleNextPage = () => {
+    setErrorMessage('');
+    let isValid = false;
 
-        If this project seems reasonable, please complete the following steps:
-          1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics.
-          2. Email ${user.email} to inform them that their project's repository has been created.
-          3. ???
+    if (currentPage === 1) isValid = validatePage0();
+    else if (currentPage === 2) isValid = validatePage1();
+    else if (currentPage === 3) isValid = validatePage2();
 
-        Happy hacking!
-        `,
-      }),
-    });
+    if (isValid) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
-    router.push("/project-proposal-form/submitted")
+  const handlePreviousPage = () => {
+    setCurrentPage(currentPage - 1);
+    setErrorMessage('');
+  };
+
+  const handleSubmit = async () => {
+    if (!validatePage2()) return;
+
+    setIsSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      if (loading || !firebaseUser || !firebaseUser.email) {
+        return;
+      }
+
+      await fetch("/api/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipients: ["Open Sourcery <umdopensourcery@gmail.com>"],
+          subject: `[ACTION REQUIRED] A new project proposal has been submitted: ${projectName}`,
+          message: `
+          Dear Open Sourcery Team,
+
+          The following project proposal was submitted via the Open Sourcery Website on ${new Date().toLocaleString()} by ${firebaseUser.email}:
+
+          Project Name: ${projectName}
+          Description: ${description}
+          Year Range: ${formatYearRange(yearMin, yearMax)}
+          Technologies Used: ${technologiesUsed}
+          Technologies Required: ${technologiesRequired}
+          Topics: ${topics}
+          Max. Team Size: ${maxTeamSize}
+
+          If this project seems reasonable, please complete the following steps:
+            1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics.
+            2. Email ${firebaseUser.email} to inform them that their project's repository has been created.
+
+          Happy hacking!
+          `,
+        }),
+      });
+
+      await createProjectProposal(firebaseUser.uid, {
+        projectName,
+        description,
+        yearRange: [yearMin, yearMax],
+        technologiesUsed,
+        technologiesRequired,
+        topics,
+        maxTeamSize,
+      });
+
+      setCurrentPage(4);
+    } catch (err) {
+      console.error('Error submitting proposal:', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to submit proposal');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <PageContainer>
-      <SectionContainer>
-        <h1 className="text-4xl md:text-6xl font-semibold mb-12 text-ycs-pink">
-          Project Proposal Form
-        </h1>
+    <div className="w-full flex justify-center px-4 py-12">
+      <div className="w-full max-w-2xl flex flex-col">
+        <FormHeader
+          title="Project Proposal"
+          confirmationPage={currentPage === 4}
+          currPage={currentPage}
+          pageCount={PAGE_COUNT}
+          sectionLabels={SECTION_LABELS}
+        />
 
-        {/* Project Name */}
-        <div className="mb-8">
-          <label className="block text-white font-semibold mb-2">
-            Project Name
-          </label>
-          <p className="text-neutral-400 text-sm mb-2">
-            This will be the name of your project's GitHub repository.
-          </p>
-          <input
-            className="w-full p-3 rounded bg-neutral-900 text-white border border-neutral-700 focus:outline-none focus:border-ycs-pink"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            placeholder="my-awesome-project"
-          />
-          {!isProjectNameValid && projectName.length > 0 && (
-            <p className="text-red-400 text-sm mt-2">
-              Must be a valid GitHub repository name (lowercase, hyphens only).
-            </p>
-          )}
-        </div>
+        {/* Page 1: Project Info */}
+        {currentPage === 1 && (
+          <FormSection
+            onBack={() => {}}
+            onNext={handleNextPage}
+            submitText="Next"
+            errorMessage={errorMessage}
+          >
+            <TextQuestion
+              question="Project (Repository) Name"
+              placeholder="my-awesome-project"
+              maxLength={100}
+              isRequired={true}
+              value={projectName}
+              onChange={setProjectName}
+              validators={[
+                (val) =>
+                  !GITHUB_REPO_REGEX.test(val) && val.length > 0
+                    ? 'Must be a valid GitHub repository name (lowercase, hyphens only)'
+                    : '',
+              ]}
+            />
 
-        {/* Description */}
-        <div className="mb-10">
-          <label className="block text-white font-semibold mb-1">
-            Description
-          </label>
-          <p className="text-neutral-400 text-sm mb-2">
-            This will be used for the description of your GitHub repository.
-          </p>
-          <textarea
-            className="w-full p-3 rounded bg-neutral-900 text-white border border-neutral-700 resize-y max-h-64 focus:outline-none focus:border-ycs-pink"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={5}
-          />
-        </div>
+            <TextareaQuestion
+              question="Description"
+              placeholder="Describe your project..."
+              maxLength={500}
+              minLength={10}
+              rows={4}
+              isRequired={true}
+              value={description}
+              onChange={setDescription}
+            />
+          </FormSection>
+        )}
 
-        {/* Year Range */}
-        {/* --- Year Range --- */}
-        <div className="mb-12">
-          <label className="block text-white font-semibold mb-1">
-            Year Range
-          </label>
-          <p className="text-neutral-400 text-sm mb-5">
-            Select the class years this project is intended for.
-          </p>
+        {/* Page 2: Team Settings */}
+        {currentPage === 2 && (
+          <FormSection
+            onBack={handlePreviousPage}
+            onNext={handleNextPage}
+            submitText="Next"
+            errorMessage={errorMessage}
+          >
+            <MultipleChoiceQuestion
+              question="Minimum Year"
+              options={minYearOptions}
+              isRequired={true}
+              value={YEAR_LABELS[yearMin]}
+              onChange={(val) => {
+                const newMin = YEAR_LABELS.indexOf(val);
+                setYearMin(newMin);
 
-          <div className="relative h-10">
-            {/* Track */}
-            <div className="absolute top-1/2 -translate-y-1/2 h-1 w-full bg-neutral-700 rounded" />
-
-            {/* Active range */}
-            <div
-              className="absolute top-1/2 -translate-y-1/2 h-1 bg-ycs-pink rounded"
-              style={{
-                left: `${minPercent}%`,
-                width: `${maxPercent - minPercent}%`,
+                // Ensure max never drops below new min
+                if (yearMax < newMin) {
+                  setYearMax(newMin);
+                }
               }}
             />
 
-            {/* Min thumb */}
-            <input
-              type="range"
-              min={0}
-              max={YEAR_MAX}
-              value={yearMin}
-              onChange={(e) =>
-                setYearMin(Math.min(Number(e.target.value), yearMax))
-              }
-              className={`relative w-full appearance-none bg-transparent pointer-events-auto`}
+            <MultipleChoiceQuestion
+              question="Maximum Year"
+              options={maxYearOptions}
+              isRequired={true}
+              value={YEAR_LABELS[yearMax]}
+              onChange={(val) => {
+                const newMax = YEAR_LABELS.indexOf(val);
+                setYearMax(newMax);
+              }}
             />
 
-            {/* Max thumb */}
-            <input
-              type="range"
-              min={0}
-              max={YEAR_MAX}
-              value={yearMax}
-              onChange={(e) =>
-                setYearMax(Math.max(Number(e.target.value), yearMin))
-              }
-              className="relative w-full appearance-none bg-transparent pointer-events-auto"
-            />
-          </div>
-
-          <p className="text-neutral-300 mt-4 font-medium">{yearLabel}</p>
-        </div>
-
-        {/* Technologies Used */}
-        <div className="mb-12">
-          <label className="block text-white font-semibold mb-1">
-            Technologies Used
-          </label>
-          <p className="text-neutral-400 text-sm mb-4">
-            Select all technologies that will be used in this project.
-          </p>
-
-          {TECHNOLOGIES.map((group) => (
-            <div key={group.header} className="mb-5">
-              <h3 className="text-neutral-300 font-semibold mb-2">
-                {group.header}
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {group.technologies.map((tech) => (
-                  <label
-                    key={tech}
-                    className="flex items-center gap-2 text-white"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={technologiesUsed.includes(tech)}
-                      onChange={() => toggleTechnologyUsed(tech)}
-                    />
-                    {tech}
-                  </label>
-                ))}
-              </div>
+            <div className="text-center mt-[-2rem] mb-8">
+              <p className="text-blue-600 font-semibold text-lg">
+                {formatYearRange(yearMin, yearMax)}
+              </p>
             </div>
-          ))}
-        </div>
 
-        {/* Technologies Required */}
-        <div className="mb-12">
-          <label className="block text-white font-semibold mb-1">
-            Technologies Required
-          </label>
-          <p className="text-neutral-400 text-sm mb-4">
-            Technologies contributors are expected to already know.
-          </p>
-
-          {technologiesUsed.length === 0 ? (
-            <p className="text-neutral-500 italic">
-              Select technologies above to choose required experience.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {technologiesUsed.map((tech) => (
-                <label
-                  key={tech}
-                  className="flex items-center gap-2 text-white"
-                >
-                  <input
-                    type="checkbox"
-                    checked={technologiesRequired.includes(tech)}
-                    onChange={() => toggleTechnologyRequired(tech)}
-                  />
-                  {tech}
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Topics */}
-        <div className="mb-14 relative">
-          <label className="block text-white font-semibold mb-1">
-            Topics
-          </label>
-          <p className="text-neutral-400 text-sm mb-3">
-            Topics help others discover your project.
-          </p>
-
-          <div className="flex flex-wrap gap-2 mb-3">
-            {topics.map((topic) => (
-              <span
-                key={topic}
-                className="px-3 py-1 bg-neutral-800 text-white rounded-full text-sm cursor-pointer hover:bg-neutral-700"
-                onClick={() =>
-                  setTopics((prev) => prev.filter((t) => t !== topic))
-                }
-              >
-                {topic} ×
-              </span>
-            ))}
-          </div>
-
-          <input
-            className="w-full p-3 rounded bg-neutral-900 text-white border border-neutral-700 focus:outline-none focus:border-ycs-pink"
-            value={topicInput}
-            onChange={(e) => setTopicInput(e.target.value)}
-            placeholder="Start typing a topic…"
-          />
-
-          {topicInput && filteredTopics.length > 0 && topics.length < TOPICS_MAX && (
-            <div className="absolute z-10 w-full mt-1 bg-neutral-900 border border-neutral-700 rounded shadow-lg max-h-48 overflow-y-auto">
-              {filteredTopics.map((topic) => (
-                <div
-                  key={topic}
-                  className="px-4 py-2 text-white hover:bg-neutral-800 cursor-pointer"
-                  onClick={() => addTopic(topic)}
-                >
-                  {topic}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Max Team Size */}
-        <div className="mb-16 text-center">
-          <label className="block text-white font-semibold text-xl mb-2">
-            Maximum Team Size
-          </label>
-          <p className="text-neutral-400 text-sm mb-6">
-            Including the project lead (you).
-          </p>
-
-          <div className="text-5xl font-bold text-ycs-pink mb-6">
-            {maxTeamSize}
-          </div>
-
-          <div className="max-w-2xl mx-auto">
-            <input
-              type="range"
-              min={1}
-              max={12}
+            <SliderQuestion
+              question="Maximum Team Size"
+              minimum={1}
+              maximum={12}
               value={maxTeamSize}
-              onChange={(e) => setMaxTeamSize(Number(e.target.value))}
-              className="w-full accent-ycs-pink"
+              onChange={setMaxTeamSize}
             />
-          </div>
-        </div>
+            <p className="text-gray-500 text-sm -mt-8 mb-4">
+              Including the project lead (you).
+            </p>
+          </FormSection>
+        )}
 
-        {/* Submit */}
-        <div className="text-center">
-          <button
-            disabled={!isProjectNameValid}
-            onClick={submitProposal}
-            className={`px-10 py-4 rounded font-semibold transition
-              ${
-                isProjectNameValid
-                  ? 'bg-ycs-pink text-black hover:opacity-90'
-                  : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
-              }`}
+        {/* Page 3: Technologies & Topics */}
+        {currentPage === 3 && (
+          <FormSection
+            onBack={handlePreviousPage}
+            onNext={handleSubmit}
+            submitText={isSubmitting ? 'Submitting...' : 'Submit Proposal'}
+            errorMessage={errorMessage}
           >
-            Submit Proposal
-          </button>
-        </div>
-      </SectionContainer>
-    </PageContainer>
+            <SelectMultipleQuestion
+              question="Technologies Used"
+              options={allTechnologies}
+              maxSelected={allTechnologies.length}
+              isRequired={true}
+              value={technologiesUsed}
+              onChange={setTechnologiesUsed}
+            />
+            <p className="text-gray-500 text-sm -mt-8 mb-8">
+              Select all technologies that will be used in this project.
+            </p>
+
+            <SelectMultipleQuestion
+              question="Technologies Required"
+              options={technologiesUsed.length > 0 ? technologiesUsed : allTechnologies}
+              maxSelected={technologiesUsed.length > 0 ? technologiesUsed.length : allTechnologies.length}
+              isRequired={technologiesUsed.length > 0}
+              value={technologiesRequired}
+              onChange={setTechnologiesRequired}
+            />
+            <p className="text-gray-500 text-sm -mt-8 mb-8">
+              Technologies contributors are expected to already know.
+            </p>
+
+            <SearchSelectQuestion
+              question="Topics"
+              placeholder="Search topics..."
+              options={allTopics}
+              minSelected={1}
+              maxSelected={TOPICS_MAX}
+              value={topics}
+              onChange={setTopics}
+            />
+            <p className="text-gray-500 text-sm -mt-8 mb-4">
+              Topics help others discover your project.
+            </p>
+          </FormSection>
+        )}
+
+        {/* Page 4: Confirmation */}
+        {currentPage === 4 && (
+          <div className="w-full flex justify-center px-4">
+            <div className="w-full max-w-2xl bg-white rounded-br-2xl rounded-bl-2xl shadow-[0_0_10px_0_white] p-10 text-center">
+              <h2 className="text-3xl font-semibold text-ycs-blue mb-4">
+                Proposal Submitted!
+              </h2>
+              <p className="text-gray-700 mb-6">
+                Your project &quot;{projectName}&quot; has been submitted for review.
+                You will receive an email when it is approved and a repository is created.
+              </p>
+              <button
+                onClick={() => router.push('/')}
+                className="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors duration-200"
+              >
+                Return Home
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

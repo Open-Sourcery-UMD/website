@@ -8,36 +8,52 @@ import {
   ReactNode,
   useRef,
 } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@firebaseConfig";
-import { registerUser } from "@lib/userService";
+import { getUserProfile } from "@lib/userService";
+import { User } from "@/types/users";
 
 type AuthContextType = {
-  user: User | null;
+  firebaseUser: FirebaseUser | null;
+  firestoreUser: User | null;
   loading: boolean;
+  error: string | null;
 };
 
 const AuthContext = createContext<AuthContextType>({
-  user: null,
+  firebaseUser: null,
+  firestoreUser: null,
   loading: true,
+  error: null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [firestoreUser, setFirestoreUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const initializedRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
+      setFirebaseUser(user);
 
       try {
         if (user && !initializedRef.current) {
           initializedRef.current = true;
-          await registerUser();
+        }
+
+        // Fetch Firestore user profile if Firebase user exists
+        if (user) {
+          const userProfile = await getUserProfile(user.uid);
+          setFirestoreUser(userProfile);
+          setError(null);
+        } else {
+          setFirestoreUser(null);
         }
       } catch (err) {
-        console.error("Auth init error:", err);
+        console.error("Auth error:", err);
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }
@@ -47,7 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider
+      value={{ firebaseUser, firestoreUser, loading, error }}
+    >
       {children}
     </AuthContext.Provider>
   );
