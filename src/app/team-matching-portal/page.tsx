@@ -17,6 +17,7 @@ export default function TeamMatchingPortalPage() {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [error, setError] = useState('');
   const [joiningProjectId, setJoiningProjectId] = useState<string | null>(null);
+  const [joinDisabled, setJoinDisabled] = useState(!!firestoreUser?.currProject);
 
   // Redirect unauthenticated users to login
   if (!loading && !firebaseUser) {
@@ -44,6 +45,7 @@ export default function TeamMatchingPortalPage() {
 
     setJoiningProjectId(project.id);
     setError('');
+    setJoinDisabled(true);
 
     try {
       await joinProject(firebaseUser.uid, project.id, firestoreUser.gitHubUsername);
@@ -52,6 +54,7 @@ export default function TeamMatchingPortalPage() {
       setProjects(updated);
     } catch (err) {
       console.error('Error joining project:', err);
+      setJoinDisabled(false);
       setError(err instanceof Error ? err.message : 'Failed to join project.');
     } finally {
       setJoiningProjectId(null);
@@ -83,7 +86,7 @@ export default function TeamMatchingPortalPage() {
                   key={project.id}
                   project={project}
                   onJoin={handleJoin}
-                  joinDisabled={!!firestoreUser?.currProject}
+                  joinDisabled={!!firestoreUser?.currProject || joinDisabled}
                   joining={joiningProjectId === project.id}
                 />
               ))}

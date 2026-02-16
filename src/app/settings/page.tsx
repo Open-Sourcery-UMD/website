@@ -173,6 +173,7 @@ export default function SettingsPage() {
       setErrorMessage("");
       setSuccessMessage("");
     }
+    router.push("/");
   };
 
   const handleLeaveProject = async () => {
@@ -197,7 +198,10 @@ export default function SettingsPage() {
       );
 
       setSuccessMessage("You have left the project.");
-      setTimeout(() => setSuccessMessage(""), 3000);
+      setTimeout(() => {
+        setSuccessMessage("");
+        router.push("/");
+      }, 1000);
     } catch (error) {
       console.error("Error leaving project:", error);
       setErrorMessage(
@@ -250,6 +254,18 @@ export default function SettingsPage() {
   }
 
   if (!firebaseUser) return null;
+
+  const hasChanges = originalData
+    ? formData.firstName !== originalData.firstName ||
+      formData.lastName !== originalData.lastName ||
+      formData.gitHubUsername !== originalData.gitHubUsername ||
+      formData.discordUsername !== originalData.discordUsername ||
+      formData.graduationYear !== originalData.graduationYear ||
+      formData.technologiesExperiencedWith.join(",") !==
+        originalData.technologiesExperiencedWith.join(",") ||
+      formData.preferredTopics.join(",") !==
+        originalData.preferredTopics.join(",")
+    : false;
 
   return (
     <VerificationGate>
@@ -452,7 +468,7 @@ export default function SettingsPage() {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || !hasChanges}
               className="px-6 py-2 bg-ycs-blue text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity font-medium"
             >
               {submitting ? "Saving..." : "Save Changes"}
