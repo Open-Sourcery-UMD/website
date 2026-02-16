@@ -32,7 +32,7 @@ const SECTION_LABELS = ['Project Info', 'Team Settings', 'Technologies & Topics'
 
 const ProjectProposalPage = () => {
   const router = useRouter();
-  const { firebaseUser, loading } = useAuth();
+  const { firebaseUser, firestoreUser, loading } = useAuth();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [errorMessage, setErrorMessage] = useState('');
@@ -135,7 +135,7 @@ const ProjectProposalPage = () => {
     setErrorMessage('');
 
     try {
-      if (loading || !firebaseUser || !firebaseUser.email) {
+      if (loading || !firebaseUser || !firebaseUser.email || !firestoreUser) {
         return;
       }
 
@@ -162,7 +162,11 @@ const ProjectProposalPage = () => {
 
           If this project seems reasonable, please complete the following steps:
             1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics.
-            2. Email ${firebaseUser.email} to inform them that their project's repository has been created.
+            2. Ensure @${firestoreUser.gitHubUsername} has been granted write access to the UMD Open Sourcery GitHub organization.
+            3. Email ${firebaseUser.email} to inform them that their project's repository has been created.
+            4. Send a message in the #team-matching Discord channel that @${firestoreUser.discordUsername} has started the '${projectName}' project.
+               Ex: 🚨 NEW PROJECT ALERT 🚨
+                   @${firestoreUser.discordUsername} has started the '${projectName}' project!
 
           Happy hacking!
           `,
