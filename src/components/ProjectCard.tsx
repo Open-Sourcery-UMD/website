@@ -1,6 +1,6 @@
 import { Project } from '@data';
 import { useTeamMatching } from '@context/TeamMatchingContext';
-import { SetStateAction } from 'react';
+import { FaGithub } from 'react-icons/fa';
 
 export const YEAR_LABELS = [
   'Freshman',
@@ -9,6 +9,8 @@ export const YEAR_LABELS = [
   'Senior',
   'Grad Student',
 ];
+
+const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 
 export const formatYearRange = (min: number, max: number) => {
   if (min === max) {
@@ -64,7 +66,31 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
             : 'Join';
 
   return (
-    <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-6 flex flex-col">
+    <div className="relative bg-neutral-900 border border-neutral-700 rounded-xl p-6 flex flex-col">
+      <a
+        href={`https://github.com/${GITHUB_ORG}/${project.repositoryName}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute top-4 right-4 group"
+      >
+        <div className="relative">
+          {/* Icon */}
+          <FaGithub
+            size={22}
+            className="text-neutral-400 transition-transform duration-200 group-hover:scale-125 group-hover:text-white"
+          />
+
+          {/* Tooltip */}
+          <div className="absolute -top-9 right-1/2 translate-x-1/2 
+                          bg-black text-white text-xs px-2 py-1 
+                          rounded opacity-0 scale-95
+                          transition-all duration-200
+                          group-hover:opacity-100 group-hover:scale-100
+                          pointer-events-none whitespace-nowrap">
+            View on GitHub
+          </div>
+        </div>
+      </a>
       <h2 className="text-2xl font-semibold text-white mb-2">
         {project.projectName}
       </h2>
