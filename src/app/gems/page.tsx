@@ -24,6 +24,13 @@ function getGemAmount(action: string): number {
   return 0;
 }
 
+function getUnit(action: string): string {
+  const lower = action.toLowerCase();
+  if (lower.includes('opened') && lower.includes('issue')) return '/issue';
+  if (lower.includes('merged') && lower.includes('pr') && !(lower.includes('pr into'))) return '/PR';
+  return '';
+}
+
 export default function GemsPage() {
   const { firebaseUser, emailVerified, loading: authLoading } = useAuth();
 
@@ -84,8 +91,8 @@ export default function GemsPage() {
                             className="flex items-center justify-between bg-zinc-800/50 rounded-lg px-4 py-3"
                           >
                             <span className="text-zinc-300 text-sm">{action}</span>
-                            <span className="text-ycs-green font-semibold text-sm ml-4 whitespace-nowrap">
-                              +{gems}
+                            <span className="text-ycs-green font-semibold text-sm ml-10 whitespace-nowrap">
+                              +{gems}{getUnit(action)}
                             </span>
                           </div>
                         );
