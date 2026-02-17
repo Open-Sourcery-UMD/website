@@ -232,6 +232,7 @@ export async function updateProjectTeamSize(projectId: string): Promise<number> 
 export async function joinProject(
   uid: string,
   projectId: string,
+  discordUsername: string,
   githubUsername: string
 ): Promise<void> {
   try {
@@ -284,6 +285,7 @@ export async function joinProject(
         A new developer has joined your project '${project.projectName}'!
         
         Developer: ${developerName}
+        Discord Username: ${discordUsername}
         GitHub Username: ${githubUsername}
         
         Best regards,

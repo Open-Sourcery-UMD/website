@@ -48,7 +48,7 @@ export default function TeamMatchingPortalPage() {
     setJoinDisabled(true);
 
     try {
-      await joinProject(firebaseUser.uid, project.id, firestoreUser.gitHubUsername);
+      await joinProject(firebaseUser.uid, project.id, firestoreUser.discordUsername, firestoreUser.gitHubUsername);
       // Refresh projects list
       const updated = await getFirestoreProjects();
       setProjects(updated);
