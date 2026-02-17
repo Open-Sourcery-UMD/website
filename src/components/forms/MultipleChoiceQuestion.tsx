@@ -41,7 +41,7 @@ const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
 
   return (
     <div className="flex flex-col mb-10 text-black">
-      <label className="relative">
+      <div className="relative">
         <div className="flex">
           {question}
           {isRequired && <span className="text-red-400">&nbsp;*</span>}
@@ -73,7 +73,7 @@ const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
         <p className="mt-2 text-red-400 text-xs">
           {error}
         </p>
-      </label>
+      </div>
     </div>
   );
 };

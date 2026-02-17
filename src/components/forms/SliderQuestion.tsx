@@ -31,7 +31,7 @@ const SliderQuestion: React.FC<SliderQuestionProps> = ({
 
   return (
     <div className="flex flex-col mb-10 text-black">
-      <label className="relative">
+      <div className="relative">
         <div className="flex text-m">
           {question}
         </div>
@@ -87,7 +87,7 @@ const SliderQuestion: React.FC<SliderQuestionProps> = ({
         <p className="mt-2 text-red-400 text-xs">
           {error}
         </p>
-      </label>
+      </div>
     </div>
   );
 };

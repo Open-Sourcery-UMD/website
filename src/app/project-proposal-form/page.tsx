@@ -67,8 +67,21 @@ const ProjectProposalPage = () => {
     []
   );
 
-  if (loading || !firebaseUser) {
+  if (loading || !firebaseUser || !firestoreUser) {
     return null;
+  }
+
+  if (firestoreUser.currProject !== '') {
+    return (
+      <div className="flex flex-col items-center text-center justify-center px-60">
+        <h1 className='mt-20 text-2xl'>
+          You're already on the '{firestoreUser.currProject}' project.
+        </h1>
+        <h2 className='mb-40 text-gray-300'>
+          You can only be a Developer on one project at a time.
+        </h2>
+      </div>
+    )
   }
 
   const validatePage0 = (): boolean => {

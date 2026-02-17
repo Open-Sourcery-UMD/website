@@ -88,7 +88,7 @@ const SearchSelectQuestion: React.FC<SearchSelectQuestionProps> = ({
 
   return (
     <div className="flex flex-col mb-10 text-black">
-      <label className="relative">
+      <div className="relative">
         <div className="flex">
           {question}
           {minSelected > 0 && <span className="text-red-400">&nbsp;*</span>}
@@ -172,7 +172,7 @@ const SearchSelectQuestion: React.FC<SearchSelectQuestionProps> = ({
         <p className="mt-2 text-red-400 text-xs">
           {error}
         </p>
-      </label>
+      </div>
     </div>
   );
 };
