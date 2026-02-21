@@ -52,9 +52,14 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
     lowerSummary.includes("general body meeting")
   ) {
     tag = "GBM";
-    imageSrc = "/open_sourcery.png";
   } else if (lowerSummary.includes("workshop")) {
     tag = "WORKSHOP";
+  }
+
+  if (lowerSummary.includes("jeopardy")) {
+    imageSrc = "/event-images/jeopardy.png";
+  } else if (lowerSummary.includes("gdsc")) {
+    imageSrc = "/event-images/gdsc.png";
   }
 
   return (
