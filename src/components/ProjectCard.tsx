@@ -17,6 +17,10 @@ export const formatYearRange = (min: number, max: number) => {
     return YEAR_LABELS[min] === 'Freshman'
       ? 'Freshmen Only'
       : `${YEAR_LABELS[min]}s Only`;
+  } else if (max === YEAR_LABELS.length - 1) {
+    return YEAR_LABELS[min] === 'Freshman'
+      ? 'Open to Any'
+      : `${YEAR_LABELS[min]}s and Up`;
   }
   return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
 };
@@ -66,7 +70,7 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
             : 'Join';
 
   return (
-    <div className="relative bg-neutral-900 border border-neutral-700 rounded-xl p-6 flex flex-col">
+    <div className={`relative ${spotsRemaining <= 0 && 'opacity-60'} bg-neutral-900 border border-neutral-700 rounded-xl p-6 flex flex-col`}>
       <a
         href={`https://github.com/${GITHUB_ORG}/${project.repositoryName}`}
         target="_blank"
@@ -166,7 +170,7 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
       <div className="text-neutral-300 mb-6">
         Team Size: {project.maxTeamSize}{' '}
         <span className="text-neutral-400">
-          ({spotsRemaining} spot{spotsRemaining !== 1 ? 's' : ''} remaining)
+          ({spotsRemaining} spot{spotsRemaining !== 1 ? 's' : ''} remaining{spotsRemaining <= 0 && ' - FULL'})
         </span>
       </div>
 

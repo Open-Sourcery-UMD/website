@@ -29,7 +29,11 @@ export default function TeamMatchingPortalPage() {
     async function fetchProjects() {
       try {
         const data = await getFirestoreProjects();
-        setProjects(data);
+        setProjects(data.sort((projA, projB) => {
+          const projASpotsRemaining = projA.maxTeamSize - projA.currentTeamSize;
+          const projBSpotsRemaining = projB.maxTeamSize - projB.currentTeamSize;
+          return projBSpotsRemaining - projASpotsRemaining;
+        }));
       } catch (err) {
         console.error('Error fetching projects:', err);
         setError('Failed to load projects.');
@@ -65,9 +69,13 @@ export default function TeamMatchingPortalPage() {
     <VerificationGate>
       <PageContainer>
         <SectionContainer>
-          <h1 className="text-4xl md:text-6xl font-semibold mb-12 text-ycs-pink">
+          <h1 className="text-4xl md:text-6xl font-semibold mb-2 text-ycs-pink">
             Team Matching Portal
           </h1>
+          <p className="mb-6 text-gray-400">
+            This portal displays all active projects within Open Sourcery, launched and led by our members.
+            Find one matching your skills and interests, and join a team as a Developer to start contributing today!
+          </p>
 
           {error && (
             <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
