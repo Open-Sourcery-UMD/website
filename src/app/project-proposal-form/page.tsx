@@ -245,7 +245,7 @@ const ProjectProposalPage = () => {
             <TextareaQuestion
               question="Description"
               placeholder="Describe your project..."
-              maxLength={500}
+              maxLength={350}
               minLength={10}
               rows={4}
               isRequired={true}

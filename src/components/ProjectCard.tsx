@@ -40,9 +40,6 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
   const currentYear = new Date().getFullYear();
   const [minGradYear, maxGradYear] = [currentYear - maxYear + 3, currentYear - minYear + 3]
 
-  const isTechnologiesMatch = project.technologiesRequired.every((tech) =>
-    data.technologies.includes(tech)
-  );
   const isYearMatch =
     userYear !== null && Number(userYear) >= minGradYear && Number(userYear) <= maxGradYear;
 
@@ -50,7 +47,6 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
   const isFullOrDisabled =
     spotsRemaining <= 0 ||
     !isYearMatch ||
-    !isTechnologiesMatch ||
     joinDisabled;
 
   const otherTechnologies = project.technologiesUsed.filter(
@@ -65,8 +61,6 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
         ? 'Full'
         : !isYearMatch
           ? 'Out of year range'
-          : !isTechnologiesMatch
-            ? 'Missing required technologies'
             : 'Join';
 
   return (
