@@ -103,17 +103,20 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
           Required Technologies
         </h3>
         <div className="grid grid-cols-2 gap-2">
-          {project.technologiesRequired.map((tech) => {
-            const has = data.technologies.includes(tech);
-            return (
-              <div key={tech} className="flex items-center gap-2 text-white">
-                <span className={has ? 'text-green-400' : 'text-red-400'}>
-                  {has ? '✔' : '✖'}
-                </span>
-                {tech}
-              </div>
-            );
-          })}
+          {project.technologiesRequired.length > 0
+            ? project.technologiesRequired.map((tech) => {
+              const has = data.technologies.includes(tech);
+              return (
+                <div key={tech} className="flex items-center gap-2 text-white">
+                  <span className={has ? 'text-green-400' : 'text-red-400'}>
+                    {has ? '✔' : '✖'}
+                  </span>
+                  {tech}
+                </div>
+              );
+            })
+          : "N/A"
+          }
         </div>
       </div>
 

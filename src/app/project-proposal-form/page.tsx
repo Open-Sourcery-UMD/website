@@ -113,10 +113,6 @@ const ProjectProposalPage = () => {
       setErrorMessage('Select at least one technology used.');
       return false;
     }
-    if (technologiesRequired.length === 0) {
-      setErrorMessage('Select at least one required technology.');
-      return false;
-    }
     if (topics.length === 0) {
       setErrorMessage('Select at least one topic.');
       return false;
@@ -333,12 +329,12 @@ const ProjectProposalPage = () => {
               question="Technologies Required"
               options={technologiesUsed.length > 0 ? technologiesUsed : allTechnologies}
               maxSelected={technologiesUsed.length > 0 ? technologiesUsed.length : allTechnologies.length}
-              isRequired={technologiesUsed.length > 0}
+              isRequired={false}
               value={technologiesRequired}
               onChange={setTechnologiesRequired}
             />
             <p className="text-gray-500 text-sm -mt-8 mb-8">
-              Technologies contributors are expected to already know.
+              Technologies contributors are required to already know before joining. (We suggest being minimal with this.)
             </p>
 
             <SearchSelectQuestion
