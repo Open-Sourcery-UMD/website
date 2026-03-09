@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/firebaseConfig';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { computeGemCount } from '@/lib/gemService';
-import { SEMESTER_START } from '@data';
+import { BOARD_MEMBERS, SEMESTER_START } from '@data';
 
 interface LeaderboardUser {
   uid: string;
@@ -50,17 +50,21 @@ export default function GemLeaderboard() {
 
         const users = await Promise.all(userPromises);
 
+        const filteredUsers = users.filter(user => !(BOARD_MEMBERS.includes(`${user.firstName} ${user.lastName}`)));
+
         // Sort by gems descending
-        users.sort((a, b) => b.gems - a.gems);
+        filteredUsers.sort((a, b) => b.gems - a.gems);
 
         // Get top 5 with ties included
         const topUsers: LeaderboardUser[] = [];
-        if (users.length > 0) {
-          topUsers.push(users[0]);
-          for (let i = 1; i < users.length && topUsers.length < 5; i++) {
-            topUsers.push(users[i]);
+        if (filteredUsers.length > 0) {
+          topUsers.push(filteredUsers[0]);
+          for (let i = 1; i < filteredUsers.length && topUsers.length < 5; i++) {
+            topUsers.push(filteredUsers[i]);
           }
         }
+
+        console.log(filteredUsers);
 
         setLeaderboardData(topUsers);
         setLoading(false);

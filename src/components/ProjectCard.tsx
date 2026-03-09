@@ -167,7 +167,7 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
       <div className="text-neutral-300 mb-6">
         Team Size: {project.maxTeamSize}{' '}
         <span className="text-neutral-400">
-          ({spotsRemaining} spot{spotsRemaining !== 1 ? 's' : ''} remaining{spotsRemaining <= 0 && ' - FULL'})
+          ({Math.max(spotsRemaining, 0)} spot{spotsRemaining !== 1 ? 's' : ''} remaining{spotsRemaining <= 0 && ' - FULL'})
         </span>
       </div>
 
