@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { Project } from '@/data';
-import { getOrganizationRepositories, getRepositoryTeamMembers, inviteUserToRepository } from './githubService';
+import { getEffectiveRepoUserCount, getOrganizationRepositories, getRepositoryTeamMembers, inviteUserToRepository } from './githubService';
 import { updateUserProfile, getUserProfile } from './userService';
 
 const PROJECTS_COLLECTION = 'projects';
@@ -94,14 +94,12 @@ export async function getFirestoreProjects(): Promise<Project[]> {
 
       try {
         // Update currentTeamSize from GitHub
-        const teamMembers = await getRepositoryTeamMembers(repositoryName);
-        const teamSize = teamMembers.length;
-
+        const stats = await getEffectiveRepoUserCount(repositoryName);
         projects.push({
           ...projectData,
           id: docSnap.id,
           createdAt: projectData.createdAt?.toDate?.() || new Date(),
-          currentTeamSize: teamSize,
+          currentTeamSize: stats.totalEffective,
         } as Project);
       } catch (error) {
         console.error(`Error updating team size for ${projectData.projectName}:`, error);

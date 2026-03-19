@@ -8,6 +8,7 @@ import {
   getUserRepositoryActivity,
   getMergedPRsInOtherRepos,
   getUserCommitsSince,
+  getEffectiveRepoUserCount,
 } from "@/lib/githubApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
@@ -52,6 +53,23 @@ export async function GET(request: NextRequest) {
         }
         const members = await getRepositoryTeamMembers(GITHUB_ORG, repoName);
         return NextResponse.json(members);
+      }
+
+      case "repoCapacity": {
+        const repoName = searchParams.get("repo");
+        if (!repoName) {
+          return NextResponse.json(
+            { error: "repo is required" },
+            { status: 400 }
+          );
+        }
+
+        const stats = await getEffectiveRepoUserCount(
+          GITHUB_ORG,
+          repoName
+        );
+
+        return NextResponse.json(stats);
       }
 
       case "activity": {
