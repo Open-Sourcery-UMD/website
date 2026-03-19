@@ -114,9 +114,8 @@ export async function getRepositoryTeamMembers(
     const collaborators = await response.json();
 
     return collaborators
-      .filter((collab: any) => collab.permissions?.admin === true)
+      .filter((collab: any) => collab.permissions?.admin || collab.permissions?.maintain)
       .map((collab: any) => collab.login);
-
   } catch (error) {
     console.error(
       `Error fetching direct admin members for ${owner}/${repo}:`,
@@ -124,6 +123,45 @@ export async function getRepositoryTeamMembers(
     );
     return [];
   }
+}
+
+async function getRepositoryInvitations(org: string, repo: string) {
+  const res = await fetch(
+    `https://api.github.com/repos/${org}/${repo}/invitations`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        Accept: "application/vnd.github+json",
+      },
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch repository invitations");
+  }
+
+  return res.json();
+}
+
+/**
+ * Gets effective repository user count (active users + pending invites)
+ */
+export async function getEffectiveRepoUserCount(
+  org: string,
+  repo: string
+) {
+  const [members, invites] = await Promise.all([
+    getRepositoryTeamMembers(org, repo),
+    getRepositoryInvitations(org, repo),
+  ]);
+
+  const activeInvites = invites.filter((invite: any) => !(invite.expired));
+
+  return {
+    activeUsers: members.length,
+    pendingInvites: activeInvites.length,
+    totalEffective: members.length + activeInvites.length,
+  };
 }
 
 /**

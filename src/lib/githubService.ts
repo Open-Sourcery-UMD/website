@@ -71,6 +71,32 @@ export async function getRepositoryTeamMembers(
 }
 
 /**
+ * Gets effective repository user count (active users + pending invites)
+ */
+export async function getEffectiveRepoUserCount(repo: string): Promise<{
+  activeUsers: number;
+  pendingInvites: number;
+  totalEffective: number;
+}> {
+  try {
+    const params = new URLSearchParams({
+      action: "repoCapacity",
+      repo,
+    });
+
+    const response = await fetch(`/api/github?${params}`);
+    if (!response.ok) {
+      return { activeUsers: 0, pendingInvites: 0, totalEffective: 0 };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching repo capacity for ${repo}:`, error);
+    return { activeUsers: 0, pendingInvites: 0, totalEffective: 0 };
+  }
+}
+
+/**
  * Sends write-access invite to a specific repository
  */
 export async function inviteUserToRepository(
