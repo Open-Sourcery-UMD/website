@@ -44,6 +44,7 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
   let tag = "MISC";
   let imageSrc = "/open_sourcery.png";
 
+  // Main events
   if (lowerSummary.includes("hack session")) {
     tag = "HACK SESSION";
     imageSrc = "/open_sourcery_mono.png";
@@ -56,10 +57,13 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
     tag = "WORKSHOP";
   }
 
+  // Specialized events
   if (lowerSummary.includes("jeopardy")) {
     imageSrc = "/event-images/jeopardy.png";
   } else if (lowerSummary.includes("gdsc")) {
     imageSrc = "/event-images/gdsc.png";
+  } else if (lowerSummary.includes("infoscifi")) {
+    imageSrc = "/event-images/infoscifi.png";
   }
 
   return (
