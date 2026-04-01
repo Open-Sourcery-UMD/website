@@ -58,12 +58,14 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
   }
 
   // Specialized events
-  if (lowerSummary.includes("jeopardy")) {
-    imageSrc = "/event-images/jeopardy.png";
-  } else if (lowerSummary.includes("gdsc")) {
+  if (lowerSummary.includes("gdsc")) {
     imageSrc = "/event-images/gdsc.png";
   } else if (lowerSummary.includes("infoscifi")) {
     imageSrc = "/event-images/infoscifi.png";
+  } else if (lowerSummary.includes("bitcamp")) {
+    imageSrc = "/event-images/bitcamp.png";
+  } else if (lowerSummary.includes("jeopardy")) {
+    imageSrc = "/event-images/jeopardy.png";
   }
 
   return (
