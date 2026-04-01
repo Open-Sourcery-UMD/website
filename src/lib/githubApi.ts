@@ -113,9 +113,7 @@ export async function getRepositoryTeamMembers(
 
     const collaborators = await response.json();
 
-    return collaborators
-      .filter((collab: any) => collab.permissions?.admin || collab.permissions?.maintain)
-      .map((collab: any) => collab.login);
+    return collaborators.map((collab: any) => collab.login);
   } catch (error) {
     console.error(
       `Error fetching direct admin members for ${owner}/${repo}:`,
