@@ -1,9 +1,9 @@
 name: Send Update Emails
 
 on:
-  schedule:
-    # 9:15 AM EST = 14:15 UTC, Monday-Friday
-    - cron: '15 14 * * 1-5'
+#  schedule:
+#    # 9:15 AM EST = 14:15 UTC, Monday-Friday
+#    - cron: '15 14 * * 1-5'
   workflow_dispatch:
 
 jobs:
