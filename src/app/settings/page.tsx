@@ -26,7 +26,7 @@ interface SettingsFormData {
   preferredTopics: string[];
 }
 
-const YEAR_OPTIONS = ["2025", "2026", "2027", "2028", "2029"];
+const YEAR_OPTIONS = ["2025", "2026", "2027", "2028", "2029", "2030", "2031"];
 const ALL_TECHNOLOGIES = TECHNOLOGIES.flatMap((g) => g.technologies);
 const ALL_TOPICS = TOPICS.flatMap((g) => g.topics).sort();
 
