@@ -37,8 +37,20 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
 
   const userYear = data.year;
   const [minYear, maxYear] = project.yearRange;
-  const currentYear = new Date().getFullYear();
-  const [minGradYear, maxGradYear] = [currentYear - maxYear + 3, currentYear - minYear + 3]
+
+  // Academic year rolls over on September 1: on/after Sept 1 2026, the class of
+  // 2030 counts as freshmen (index 0), 2029 as sophomores, and so on.
+  const now = new Date();
+  const academicYear = now.getMonth() >= 8 ? now.getFullYear() + 1 : now.getFullYear();
+
+  const allowsFreshmen = minYear === 0;
+  const allowsGradStudents = maxYear === YEAR_LABELS.length - 1;
+
+  // Higher grad year = younger student. If freshmen are allowed, allow any year
+  // above the freshman cutoff too (no upper bound). If grad students are
+  // allowed, allow any year below the grad cutoff too (no lower bound).
+  const minGradYear = allowsGradStudents ? -Infinity : academicYear + 3 - maxYear;
+  const maxGradYear = allowsFreshmen ? Infinity : academicYear + 3 - minYear;
 
   const isYearMatch =
     userYear !== null && Number(userYear) >= minGradYear && Number(userYear) <= maxGradYear;
