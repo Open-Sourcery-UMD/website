@@ -88,11 +88,11 @@ async function main() {
     // Check if repo now exists in the org
     if (!orgRepos.includes(repoName)) continue;
 
-    // Look up proposer's email via createdBy UID
-    const userDoc = await db.collection("users").doc(project.createdBy).get();
+    // Look up proposer's email via pointOfContact UID
+    const userDoc = await db.collection("users").doc(project.pointOfContact).get();
     if (!userDoc.exists) {
       console.warn(
-        `User ${project.createdBy} not found for project ${project.projectName}`
+        `User ${project.pointOfContact} not found for project ${project.projectName}`
       );
       continue;
     }

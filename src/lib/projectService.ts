@@ -44,7 +44,7 @@ export async function createProjectProposal(
     const projectDoc = {
       ...projectData,
       repositoryName,
-      createdBy: uid,
+      pointOfContact: uid,
       createdAt: Timestamp.now(),
       currentTeamSize: 1, // Creator is first team member
       status: 'PROPOSED',
@@ -185,17 +185,17 @@ export async function getUserCurrentProject(uid: string): Promise<Project | null
 
 /**
  * Fetches the lead developer's email for a project
- * @param project Project object containing createdBy (lead developer UID)
+ * @param project Project object containing pointOfContact (lead developer UID)
  * @returns Email of the lead developer or null if not found
  */
 async function getLeadDeveloperEmail(project: Project): Promise<string | null> {
   try {
-    if (!project.createdBy) {
-      console.warn('Project has no createdBy field');
+    if (!project.pointOfContact) {
+      console.warn('Project has no pointOfContact field');
       return null;
     }
 
-    const leadDevProfile = await getUserProfile(project.createdBy);
+    const leadDevProfile = await getUserProfile(project.pointOfContact);
     return leadDevProfile?.email || null;
   } catch (error) {
     console.error('Error fetching lead developer email:', error);

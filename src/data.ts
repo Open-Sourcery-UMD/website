@@ -37,7 +37,7 @@ export interface Project {
   maxTeamSize: number;
   currentTeamSize: number;
   repositoryName: string;
-  createdBy: string;
+  pointOfContact: string;
   createdAt: Date;
   status: projectStatus;
 }
