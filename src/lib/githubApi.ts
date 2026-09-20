@@ -7,12 +7,49 @@
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
+const GITHUB_API = "https://api.github.com";
+const PER_PAGE = 100;
+const MAX_PAGES = 10;
 
 function authHeaders(): Record<string, string> {
   return {
     Accept: "application/vnd.github.v3+json",
     ...(GITHUB_TOKEN && { Authorization: `token ${GITHUB_TOKEN}` }),
   };
+}
+
+/**
+ * Fetches every page of a paginated GitHub list endpoint.
+ *
+ * GitHub defaults to 30 items per page, so a single unpaginated request
+ * silently truncates anything busier than that. `stopWhen` lets a caller bail
+ * out once a page has run past the time window it cares about.
+ */
+async function fetchAllPages(
+  baseUrl: string,
+  stopWhen?: (page: any[]) => boolean
+): Promise<any[]> {
+  const all: any[] = [];
+  const separator = baseUrl.includes("?") ? "&" : "?";
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const response = await fetch(
+      `${baseUrl}${separator}per_page=${PER_PAGE}&page=${page}`,
+      { headers: authHeaders() }
+    );
+
+    if (!response.ok) break;
+
+    const items = await response.json();
+    if (!Array.isArray(items) || items.length === 0) break;
+
+    all.push(...items);
+
+    if (items.length < PER_PAGE) break;
+    if (stopWhen?.(items)) break;
+  }
+
+  return all;
 }
 
 /**
@@ -209,25 +246,41 @@ export async function getUserRepositoryActivity(
     }
 
     const sinceISO = since.toISOString();
+    // GitHub logins are case-insensitive, so compare them lowercased
+    const login = username.toLowerCase();
 
-    const issuesResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repoName}/issues?creator=${username}&since=${sinceISO}&state=all`,
-      { headers: authHeaders() }
+    // The issues endpoint honors `creator`, but its `since` filters on
+    // updated_at - an issue opened last semester and commented on this one
+    // still comes back, so created_at has to be checked here.
+    const issues = await fetchAllPages(
+      `${GITHUB_API}/repos/${owner}/${repoName}/issues` +
+        `?creator=${encodeURIComponent(username)}&state=all&since=${sinceISO}`
     );
 
-    const issues = issuesResponse.ok ? await issuesResponse.json() : [];
     const openedIssuesCount = issues.filter(
-      (issue: any) => !issue.pull_request
+      (issue: any) =>
+        !issue.pull_request &&
+        issue.user?.login?.toLowerCase() === login &&
+        new Date(issue.created_at) >= since
     ).length;
 
-    const prsResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repoName}/pulls?creator=${username}&state=closed&since=${sinceISO}`,
-      { headers: authHeaders() }
+    // The pulls endpoint silently ignores `creator` and `since` - it accepts
+    // neither - so every filter has to be applied to the response ourselves.
+    // Without the author check, every developer on a project is credited with
+    // the whole team's merged PRs.
+    const prs = await fetchAllPages(
+      `${GITHUB_API}/repos/${owner}/${repoName}/pulls` +
+        `?state=closed&sort=updated&direction=desc`,
+      // Newest-updated first, and merging always bumps updated_at, so once a
+      // page ends before the window nothing after it can have merged inside it
+      (page) => new Date(page[page.length - 1].updated_at) < since
     );
 
-    const prs = prsResponse.ok ? await prsResponse.json() : [];
     const mergedPRsCount = prs.filter(
-      (pr: any) => pr.merged_at && new Date(pr.merged_at) >= since
+      (pr: any) =>
+        pr.merged_at &&
+        new Date(pr.merged_at) >= since &&
+        pr.user?.login?.toLowerCase() === login
     ).length;
 
     return { issues: openedIssuesCount, mergedPRs: mergedPRsCount };
@@ -250,10 +303,22 @@ export async function getMergedPRsInOtherRepos(
 ): Promise<{ repo: string; mergedAt: string }[]> {
   try {
     const sinceDate = since.toISOString().split("T")[0];
-    const query = `author:${username}+is:pr+is:merged+is:public+-repo:${excludeRepo}+merged:>=${sinceDate}`;
+    const qualifiers = [
+      `author:${username}`,
+      "is:pr",
+      "is:merged",
+      "is:public",
+      `merged:>=${sinceDate}`,
+    ];
+
+    // A developer with no current project has no repo to exclude
+    if (excludeRepo) {
+      qualifiers.push(`-repo:${excludeRepo}`);
+    }
 
     const response = await fetch(
-      `https://api.github.com/search/issues?q=${query}&per_page=100`,
+      `${GITHUB_API}/search/issues` +
+        `?q=${encodeURIComponent(qualifiers.join(" "))}&per_page=${PER_PAGE}`,
       { headers: authHeaders() }
     );
 

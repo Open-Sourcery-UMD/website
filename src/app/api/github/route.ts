@@ -92,11 +92,13 @@ export async function GET(request: NextRequest) {
 
       case "otherPRs": {
         const username = searchParams.get("username");
-        const excludeRepo = searchParams.get("excludeRepo");
+        // excludeRepo is optional: a developer with no current project has
+        // no repo to exclude, but their outside PRs still earn gems
+        const excludeRepo = searchParams.get("excludeRepo") || "";
         const since = searchParams.get("since");
-        if (!username || !excludeRepo || !since) {
+        if (!username || !since) {
           return NextResponse.json(
-            { error: "username, excludeRepo, and since are required" },
+            { error: "username and since are required" },
             { status: 400 }
           );
         }
