@@ -65,8 +65,11 @@ export async function createProjectProposal(
 /**
  * Fetches all projects from Firestore and validates they exist as GitHub repos
  * Updates currentTeamSize from GitHub if repo exists
+ * ARCHIVED projects are excluded unless includeArchived is set
  */
-export async function getFirestoreProjects(): Promise<Project[]> {
+export async function getFirestoreProjects(
+  options?: { includeArchived?: boolean }
+): Promise<Project[]> {
   try {
     const projectsRef = collection(db, PROJECTS_COLLECTION);
     const snapshot = await getDocs(projectsRef);
@@ -85,6 +88,11 @@ export async function getFirestoreProjects(): Promise<Project[]> {
     for (const docSnap of snapshot.docs) {
       const projectData = docSnap.data();
       const repositoryName = projectData.repositoryName || '';
+
+      // Skip archived projects before hitting the GitHub API for them
+      if (projectData.status === 'ARCHIVED' && !options?.includeArchived) {
+        continue;
+      }
 
       // Skip projects if their repository doesn't exist in GitHub org
       if (validRepos.length > 0 && !validRepos.includes(repositoryName)) {
@@ -165,8 +173,9 @@ export async function getUserCurrentProject(uid: string): Promise<Project | null
       return null;
     }
 
-    // Find the project with matching ID or name
-    const projects = await getFirestoreProjects();
+    // Find the project with matching ID or name. Archived projects are
+    // included so members of a newly archived project can still see it.
+    const projects = await getFirestoreProjects({ includeArchived: true });
     return projects.find((p) => p.projectName === userData.currProject) || null;
   } catch (error) {
     console.error('Error fetching user current project:', error);
@@ -238,6 +247,11 @@ export async function joinProject(
     const project = await getProjectById(projectId);
     if (!project) {
       throw new Error('Project not found');
+    }
+
+    // Guard against a stale client list that still shows an archived project
+    if (project.status === 'ARCHIVED') {
+      throw new Error('This project is no longer accepting new members');
     }
 
     // Check if project is full
@@ -330,7 +344,8 @@ export async function leaveProject(uid: string, projectId: string): Promise<void
  */
 export async function leaveProjectByName(uid: string, projectName: string): Promise<void> {
   try {
-    const projects = await getFirestoreProjects();
+    // Include archived projects so their team size is still updated on leave
+    const projects = await getFirestoreProjects({ includeArchived: true });
     const project = projects.find((p) => p.projectName === projectName);
 
     await updateUserProfile(uid, { currProject: '' });

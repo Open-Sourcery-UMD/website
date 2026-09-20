@@ -4,7 +4,67 @@ import { getOrganizationRepositories } from "../src/lib/githubApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 
+/**
+ * Emails every developer currently on a project that has been archived, letting
+ * them know they can leave it and join another one. Projects are flagged with
+ * archiveNotificationSent so the daily run doesn't email the same team twice.
+ */
+async function notifyArchivedProjects(): Promise<number> {
+  const archivedSnapshot = await db
+    .collection("projects")
+    .where("status", "==", "ARCHIVED")
+    .get();
+
+  let notified = 0;
+
+  for (const projectDoc of archivedSnapshot.docs) {
+    const project = projectDoc.data();
+
+    // Already told this team - don't email them again on the next run
+    if (project.archiveNotificationSent) continue;
+
+    // Developers on the project are the users whose currProject matches it
+    const membersSnapshot = await db
+      .collection("users")
+      .where("currProject", "==", project.projectName)
+      .get();
+
+    for (const memberDoc of membersSnapshot.docs) {
+      const memberData = memberDoc.data();
+      if (!memberData.email) continue;
+
+      console.log(
+        `Project "${project.projectName}" was archived. Emailing ${memberData.email}`
+      );
+      await sendEmail(
+        [memberData.email],
+        `Project "${project.projectName}" Has Been Archived`,
+        `Hi ${memberData.firstName},\n\n` +
+          `The project "${project.projectName}" has been archived and is no longer ` +
+          `an active Open Sourcery project. Thank you for the work you put into it!\n\n` +
+          `You're welcome to leave the project from your settings page and join a new ` +
+          `team whenever you're ready; head to the Team Matching Portal to see what ` +
+          `else is looking for developers.\n\n` +
+          `- Open Sourcery`
+      );
+
+      notified++;
+    }
+
+    await db.collection("projects").doc(projectDoc.id).update({
+      archiveNotificationSent: true,
+    });
+  }
+
+  return notified;
+}
+
 async function main() {
+  const archiveNotifications = await notifyArchivedProjects();
+  console.log(
+    `${archiveNotifications} developer(s) notified about archived projects.`
+  );
+
   // Get all PROPOSED projects
   const proposedSnapshot = await db
     .collection("projects")

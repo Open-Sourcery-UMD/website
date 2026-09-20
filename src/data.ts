@@ -12,7 +12,7 @@ interface TopicGroup {
   topics: string[]
 }
 
-type projectStatus = 'PROPOSED' | 'IN_PROGRESS';
+type projectStatus = 'PROPOSED' | 'IN_PROGRESS' | 'ARCHIVED';
 
 export interface Project {
   id: string;

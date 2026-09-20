@@ -31,6 +31,10 @@ async function main() {
     if (projectsSnapshot.empty) continue;
 
     const project = projectsSnapshot.docs[0].data();
+
+    // Don't nag members of archived projects
+    if (project.status === "ARCHIVED") continue;
+
     const repoName = project.repositoryName;
     if (!repoName) continue;
 
