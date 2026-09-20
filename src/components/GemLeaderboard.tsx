@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/firebaseConfig';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { computeGemCount } from '@/lib/gemService';
-import { BOARD_MEMBERS, SEMESTER_START } from '@data';
+import { BOARD_MEMBERS, getSemesterStart } from '@data';
 
 interface LeaderboardUser {
   uid: string;
@@ -27,10 +27,12 @@ export default function GemLeaderboard() {
         const querySnapshot = await getDocs(q);
 
         // Compute gem counts for all users in parallel
+        const semesterStart = getSemesterStart();
+
         const userPromises = querySnapshot.docs.map(async (doc) => {
           const userData = doc.data();
           try {
-            const breakdown = await computeGemCount(doc.id, SEMESTER_START);
+            const breakdown = await computeGemCount(doc.id, semesterStart);
             return {
               uid: doc.id,
               firstName: userData.firstName || 'Unknown',

@@ -1,6 +1,18 @@
-// Start of current semester (Spring 2026)
-export const SEMESTER_START = new Date('2026-01-26');
-export const BOARD_MEMBERS = ['Om Arya', 'Sifene Fufa', 'Rena Max', 'Hannah Sitther', 'Shehreen Alam', 'Emma Schurr'];
+/**
+ * Start of the semester currently in progress, so gem counts reset each term.
+ * The fall semester starts September 1 and the spring semester January 30;
+ * before January 30 we're still in the term that began the previous September.
+ */
+export function getSemesterStart(now: Date = new Date()): Date {
+  const year = now.getFullYear();
+  const fallStart = new Date(year, 8, 1); // September 1
+  const springStart = new Date(year, 0, 30); // January 30
+
+  if (now >= fallStart) return fallStart;
+  if (now >= springStart) return springStart;
+  return new Date(year - 1, 8, 1);
+}
+export const BOARD_MEMBERS = ['Om Arya', 'Shreyas Thirumale', 'Sifene Fufa', 'Lina Hsu', 'Diksha Pal', 'Colin Kurniawan'];
 
 interface TechnologyGroup {
   header: string,

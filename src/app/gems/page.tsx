@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { PageContainer, SectionContainer } from '@components/Container';
 import { useAuth } from '@context/AuthContext';
 import { computeGemCount } from '@/lib/gemService';
-import { SEMESTER_START } from '@data';
+import { getSemesterStart } from '@data';
 import GemLeaderboard from '@components/GemLeaderboard';
 
 const ITEMS_PER_PAGE = 10;
@@ -46,7 +46,7 @@ export default function GemsPage() {
         return;
       }
       try {
-        const breakdown = await computeGemCount(firebaseUser.uid, SEMESTER_START);
+        const breakdown = await computeGemCount(firebaseUser.uid, getSemesterStart());
         setTotalGems(breakdown.totalGems);
         setActions(breakdown.actions);
       } catch (error) {
