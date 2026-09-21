@@ -6,6 +6,8 @@ import { leadCannotLeaveMessage, Project } from '@data';
 import { CardMembership, ProjectCard } from '@components/ProjectCard';
 import Link from 'next/link';
 import { useAuth } from '@context/AuthContext';
+
+const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || 'Open-Sourcery-UMD';
 import { useUserProjects } from '@hooks/useUserProjects';
 import {
   getFirestoreProjects,
@@ -31,6 +33,7 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
   const { firebaseUser, emailVerified, loading } = useAuth();
   const {
     projects: myProjects,
+    pendingProjectIds,
     pendingProposals,
     loading: loadingMembership,
     incomplete: membershipIncomplete,
@@ -72,10 +75,18 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
 
   const myProjectIds = new Set(myProjects.map((project) => project.id));
 
+  // Only invited so far, not yet a collaborator anywhere: that invitation has
+  // to be answered before they can join a different team
+  const pendingInvite =
+    myProjects.length > 0 && myProjects.every((project) => pendingProjectIds.has(project.id))
+      ? myProjects[0]
+      : null;
+
   const membershipFor = (project: Project): CardMembership => {
     if (!isSignedIn) return 'signed-out';
     if (loadingMembership) return 'checking';
     if (myProjectIds.has(project.id)) return 'this';
+    if (pendingInvite) return 'invited';
     if (myProjects.length > 0) return 'other';
     // A proposal awaiting review is a commitment to lead that project
     if (pendingProposals.length > 0) return 'proposal';
@@ -174,6 +185,22 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
         {error && (
           <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
             {error}
+          </div>
+        )}
+
+        {isSignedIn && !loadingMembership && pendingInvite && (
+          <div className="mb-6 p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
+            Your invitation to &apos;{pendingInvite.projectName}&apos; is waiting on GitHub.{' '}
+            <a
+              href={`https://github.com/${GITHUB_ORG}/${pendingInvite.repositoryName}/invitations`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-medium"
+            >
+              Accept it
+            </a>{' '}
+            to start contributing, or decline it if you&apos;d rather join a different project.
+            You can&apos;t join another project until you respond.
           </div>
         )}
 

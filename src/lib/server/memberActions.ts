@@ -48,10 +48,14 @@ function toProjectRecord(id: string, data: DocumentData): ProjectRecord {
   };
 }
 
+function normalizeLogin(login: string): string {
+  return login.trim().toLowerCase();
+}
+
 function hasMember(members: RepositoryMembership, login: string): boolean {
-  const target = login.trim().toLowerCase();
+  const target = normalizeLogin(login);
   return [...members.collaborators, ...members.pendingInvitees].some(
-    (member) => member.trim().toLowerCase() === target
+    (member) => normalizeLogin(member) === target
   );
 }
 
@@ -285,6 +289,20 @@ export async function joinProject(uid: string, projectId: unknown): Promise<void
       throw new HttpError(409, "You're already on this project.");
     }
     if (currentProjects.length > 0) {
+      // An unanswered invitation holds them to that project until they
+      // respond - otherwise they could collect invitations to several teams
+      const target = normalizeLogin(login);
+      const invitedOnly = currentProjects.every(
+        (current) =>
+          !membershipOf(current).collaborators.some((member) => normalizeLogin(member) === target)
+      );
+      if (invitedOnly) {
+        throw new HttpError(
+          409,
+          `You have a pending invitation to "${currentProjects[0].projectName}". Accept or ` +
+            `decline it on GitHub before joining another project.`
+        );
+      }
       throw new HttpError(
         409,
         "You're already on a project. Leave it from Settings before joining another."

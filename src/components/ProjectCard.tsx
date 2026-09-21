@@ -11,6 +11,7 @@ const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
  * - none:        not on any project, free to join
  * - this:        already on this project
  * - other:       already on a different project
+ * - invited:     has an unanswered invitation to a different project
  * - proposal:    has a proposal awaiting review, which blocks joining
  * - checking:    membership still loading
  * - unavailable: membership couldn't be verified, so joining is blocked
@@ -21,6 +22,7 @@ export type CardMembership =
   | 'none'
   | 'this'
   | 'other'
+  | 'invited'
   | 'proposal'
   | 'checking'
   | 'unavailable'
@@ -96,7 +98,9 @@ export const ProjectCard = ({
       ? 'Already on this project'
       : membership === 'other'
         ? 'Already on a project'
-        : membership === 'proposal'
+        : membership === 'invited'
+          ? 'Respond to your invite first'
+          : membership === 'proposal'
           ? 'Proposal pending'
           : membership === 'checking'
             ? 'Checking...'

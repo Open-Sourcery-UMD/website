@@ -80,7 +80,7 @@ export default function VerificationGate({ children }: VerificationGateProps) {
           <button
             onClick={handleResendEmail}
             disabled={resendLoading}
-            className="w-full bg-ycs-blue hover:bg-blue-600 disabled:bg-gray-400 text-graphite font-semibold py-2 px-4 rounded-lg transition mb-4"
+            className="w-full bg-ycs-blue hover:bg-blue-600 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition mb-4"
           >
             {resendLoading ? 'Sending...' : 'Resend Verification Email'}
           </button>
