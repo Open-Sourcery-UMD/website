@@ -6,6 +6,8 @@ interface FormSectionProps {
   onNext: () => void;
   submitText: string;
   errorMessage: string;
+  /** Less padding, for short single-step forms like log-in */
+  compact?: boolean;
 }
 
 const FormSection: React.FC<FormSectionProps> = ({
@@ -13,13 +15,18 @@ const FormSection: React.FC<FormSectionProps> = ({
   onBack,
   onNext,
   submitText,
-  errorMessage
+  errorMessage,
+  compact = true,
 }) => {
   const hasSubmit = submitText && submitText.trim().length > 0;
 
   return (
     <div className="w-full flex justify-center px-4">
-      <div className="w-full max-w-4xl bg-white rounded-br-2xl rounded-bl-2xl shadow-[0_0_10px_0_white] p-10 md:p-10">
+      <div
+        className={`w-full max-w-4xl bg-white rounded-br-2xl rounded-bl-2xl shadow-[0_0_10px_0_white] ${
+          compact ? "px-6 pt-5 pb-6 sm:px-8 sm:pb-8" : "p-10"
+        }`}
+      >
         
         {/* Form Content */}
         <div className="">
@@ -28,13 +35,13 @@ const FormSection: React.FC<FormSectionProps> = ({
 
         {/* Error Message */}
         {errorMessage && errorMessage.trim().length > 0 && (
-          <div className="mt-6 ml-10 text-sm text-red-600 font-medium">
+          <div className={`text-sm text-red-600 font-medium ${compact ? "mt-3" : "mt-6 ml-10"}`}>
             {errorMessage}
           </div>
         )}
 
         {/* Buttons */}
-        <div className="mt-8 flex justify-end gap-4">
+        <div className={`flex justify-end gap-4 ${compact ? "mt-6" : "mt-8"}`}>
           {hasSubmit ? (
             <>
               <button

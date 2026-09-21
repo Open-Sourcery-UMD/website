@@ -6,6 +6,8 @@ interface FormHeaderProps {
   currPage: number;
   pageCount: number;
   sectionLabels: string[];
+  /** Less padding, for short single-step forms like log-in */
+  compact?: boolean;
 }
 
 const FormHeader: React.FC<FormHeaderProps> = ({
@@ -13,7 +15,8 @@ const FormHeader: React.FC<FormHeaderProps> = ({
   confirmationPage,
   currPage,
   pageCount,
-  sectionLabels
+  sectionLabels,
+  compact = true,
 }) => {
   const isConfirmation = currPage === pageCount;
   const showProgress = pageCount > 1 && sectionLabels.length > 1;
@@ -32,11 +35,15 @@ const FormHeader: React.FC<FormHeaderProps> = ({
     sectionLabels[currPage - 1] || "";
 
   return (
-    <div className="w-full flex justify-center px-4 mt-8">
-      <div className="w-full max-w-4xl bg-white rounded-tr-2xl rounded-tl-2xl shadow-[0_0_10px_0_white] p-8 md:p-10">
+    <div className={`w-full flex justify-center px-4 ${compact ? "" : "mt-8"}`}>
+      <div
+        className={`w-full max-w-4xl bg-white rounded-tr-2xl rounded-tl-2xl shadow-[0_0_10px_0_white] ${
+          compact ? "px-6 pt-6 pb-1 sm:px-8 sm:pt-8" : "p-8 md:p-10"
+        }`}
+      >
         
         {/* Title */}
-        <h1 className="text-3xl font-semibold text-gray-900">
+        <h1 className={`font-semibold text-gray-900 ${compact ? "text-2xl" : "text-3xl"}`}>
           {title}
         </h1>
 

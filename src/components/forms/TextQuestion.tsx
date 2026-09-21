@@ -12,6 +12,8 @@ interface TextQuestionProps {
   value?: string;
   onChange?: (value: string) => void;
   type?: string;
+  /** Tighter spacing and a full-width input, for short forms like log-in */
+  compact?: boolean;
 }
 
 const TextQuestion: React.FC<TextQuestionProps> = ({
@@ -23,7 +25,8 @@ const TextQuestion: React.FC<TextQuestionProps> = ({
   asyncValidators = [],
   value,
   onChange,
-  type = "text"
+  type = "text",
+  compact = true,
 }) => {
   const [internalInput, setInternalInput] = useState("");
   const [error, setError] = useState("");
@@ -89,7 +92,7 @@ const TextQuestion: React.FC<TextQuestionProps> = ({
   };
 
   return (
-    <div className="flex flex-col mb-10 text-black">
+    <div className={`flex flex-col text-black ${compact ? "mb-5" : "mb-10"}`}>
         <label className="relative text-m">
           <div className="flex">
             { question }{ isRequired && <span className="text-red-400">&nbsp;*</span>}
@@ -98,7 +101,7 @@ const TextQuestion: React.FC<TextQuestionProps> = ({
           <div className="relative flex items-center">
             <input
               type={type}
-              className={`mt-1 w-60 p-2 rounded-xl border-2 ${error ? "border-red-500" : "border-gray-300"}`}
+              className={`mt-1 p-2 rounded-xl border-2 ${compact ? "w-full" : "w-60"} ${error ? "border-red-500" : "border-gray-300"}`}
               value={inputValue}
               placeholder={placeholder}
               maxLength={maxLength}

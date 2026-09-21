@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@firebaseConfig";
 import FormHeader from "@components/forms/FormHeader";
 import FormSection from "@components/forms/FormSection";
@@ -17,6 +17,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  // The same page doubles as "forgot password": just the email, and a link
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSentTo, setResetSentTo] = useState("");
 
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
@@ -75,15 +78,118 @@ export default function LoginPage() {
     router.push("/sign-up");
   };
 
+  const showResetForm = (show: boolean) => {
+    setResetMode(show);
+    setResetSentTo("");
+    setErrorMessage("");
+  };
+
+  const handleSendReset = async () => {
+    setErrorMessage("");
+
+    const email = formData.email.trim();
+    if (!email) {
+      setErrorMessage("Enter the email address you signed up with.");
+      return;
+    }
+    if (!validateEmail(email)) {
+      setErrorMessage("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setResetSentTo(email);
+    } catch (error: any) {
+      if (error.code === "auth/user-not-found") {
+        // Answer exactly as for a real account, so this form can't be used
+        // to find out who has one
+        setResetSentTo(email);
+      } else if (error.code === "auth/too-many-requests") {
+        setErrorMessage("Too many requests. Please wait a few minutes and try again.");
+      } else {
+        console.error("Password reset error:", error);
+        setErrorMessage("We couldn't send a reset link. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (resetMode) {
+    return (
+      <div className="w-full flex justify-center px-4 py-12">
+        <div className="w-full max-w-md flex flex-col">
+          <FormHeader
+            title="Reset Your Password"
+            confirmationPage={false}
+            currPage={0}
+            pageCount={1}
+            sectionLabels={[]}
+            compact
+          />
+
+          <FormSection
+            onBack={() => showResetForm(false)}
+            onNext={handleSendReset}
+            submitText={loading ? "Sending..." : resetSentTo ? "Send Again" : "Send Reset Link"}
+            errorMessage={errorMessage}
+            compact
+          >
+            <p className="text-sm text-gray-600 mb-4">
+              Enter the email address you signed up with and we&apos;ll send you a link to choose
+              a new password.
+            </p>
+
+            <TextQuestion
+              question="Email"
+              placeholder="Enter your email"
+              maxLength={100}
+              isRequired={true}
+              value={formData.email}
+              onChange={(value) => setFormData((prev) => ({ ...prev, email: value }))}
+              type="email"
+              compact
+            />
+
+            {resetSentTo && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-blue-800 font-medium">Check your email</p>
+                <p className="text-blue-600 text-sm mt-1">
+                  If there&apos;s an account for {resetSentTo}, we&apos;ve sent it a link to reset
+                  your password. If you can&apos;t find the email, please check your spam.
+                </p>
+              </div>
+            )}
+
+            <p className="text-sm text-gray-600">
+              Remembered it?{" "}
+              <button
+                type="button"
+                onClick={() => showResetForm(false)}
+                className="text-ycs-blue hover:underline font-medium"
+              >
+                Back to log in
+              </button>
+            </p>
+          </FormSection>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex justify-center px-4 py-12">
-      <div className="w-full max-w-2xl flex flex-col">
+      <div className="w-full max-w-md flex flex-col">
         <FormHeader
           title="Log In to Your Account"
           confirmationPage={false}
           currPage={0}
           pageCount={1}
           sectionLabels={[]}
+          compact
         />
 
         <FormSection
@@ -91,6 +197,7 @@ export default function LoginPage() {
           onNext={handleSubmit}
           submitText={loading ? "Logging in..." : "Log In"}
           errorMessage={errorMessage}
+          compact
         >
           <TextQuestion
             question="Email"
@@ -100,6 +207,7 @@ export default function LoginPage() {
             value={formData.email}
             onChange={(value) => setFormData((prev) => ({ ...prev, email: value }))}
             type="email"
+              compact
           />
 
           <TextQuestion
@@ -110,10 +218,20 @@ export default function LoginPage() {
             value={formData.password}
             onChange={(value) => setFormData((prev) => ({ ...prev, password: value }))}
             type="password"
+              compact
           />
 
-          <div className="flex flex-col mb-10 text-black">
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="flex flex-col gap-1 text-black">
+            <p className="text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={() => showResetForm(true)}
+                className="text-ycs-blue hover:underline font-medium"
+              >
+                Forgot your password?
+              </button>
+            </p>
+            <p className="text-sm text-gray-600">
               Don't have an account?{" "}
               <button
                 onClick={handleSignUpLink}
