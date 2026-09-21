@@ -9,7 +9,7 @@ import { updateUserProfile, resendVerificationEmail } from "@lib/userService";
 import { getGitHubUser } from "@lib/githubService";
 import { leaveProject, withdrawProposal } from "@/lib/projectService";
 import { useUserProjects } from "@hooks/useUserProjects";
-import { Project, TECHNOLOGIES, TOPICS } from "@data";
+import { getGraduationYearOptions, Project, TECHNOLOGIES, TOPICS } from "@data";
 import TextQuestion from "@components/forms/TextQuestion";
 import MultipleChoiceQuestion from "@components/forms/MultipleChoiceQuestion";
 import SelectMultipleQuestion from "@components/forms/SelectMultipleQuestion";
@@ -27,7 +27,15 @@ interface SettingsFormData {
   preferredTopics: string[];
 }
 
-const YEAR_OPTIONS = ["2025", "2026", "2027", "2028", "2029", "2030", "2031"];
+/**
+ * The year choices, keeping whatever the user saved previously selectable
+ * even once it falls outside the generated range - otherwise editing any
+ * other setting would silently clear their graduation year.
+ */
+function graduationYearOptions(current: string): string[] {
+  const options = getGraduationYearOptions();
+  return current && !options.includes(current) ? [current, ...options] : options;
+}
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 const ALL_TECHNOLOGIES = TECHNOLOGIES.flatMap((g) => g.technologies);
 const ALL_TOPICS = TOPICS.flatMap((g) => g.topics).sort();
@@ -453,7 +461,7 @@ export default function SettingsPage() {
           {/* Graduation Year */}
           <MultipleChoiceQuestion
             question="Graduation Year"
-            options={YEAR_OPTIONS}
+            options={graduationYearOptions(formData.graduationYear)}
             isRequired={true}
             value={formData.graduationYear}
             onChange={(value) => setFormData((prev) => ({ ...prev, graduationYear: value }))}

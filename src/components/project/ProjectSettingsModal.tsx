@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Project, TECHNOLOGIES } from '@data';
-import { YEAR_LABELS } from '@components/ProjectCard';
+import { Project, TECHNOLOGIES, YEAR_LABELS } from '@data';
 import {
   ProjectTeamMember,
   transferProjectLeadership,

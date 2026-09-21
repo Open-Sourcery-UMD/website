@@ -9,11 +9,10 @@ import {
   FaGithub,
   FaStar,
 } from 'react-icons/fa';
-import { Project } from '@data';
+import { formatYearRange, Project } from '@data';
 import { useAuth } from '@context/AuthContext';
 import { useUserProjects } from '@hooks/useUserProjects';
 import { SectionContainer } from '@components/Container';
-import { formatYearRange } from '@components/ProjectCard';
 import {
   getProjectById,
   getProjectTeamMembers,

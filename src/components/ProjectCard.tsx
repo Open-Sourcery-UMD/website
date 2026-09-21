@@ -1,30 +1,9 @@
-import { Project } from '@data';
+import { formatYearRange, getClassStanding, Project } from '@data';
 import { useTeamMatching } from '@context/TeamMatchingContext';
 import { ProjectLead } from '@/lib/projectService';
 import { FaDiscord, FaEnvelope, FaGithub } from 'react-icons/fa';
 
-export const YEAR_LABELS = [
-  'Freshman',
-  'Sophomore',
-  'Junior',
-  'Senior',
-  'Grad Student',
-];
-
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
-
-export const formatYearRange = (min: number, max: number) => {
-  if (min === max) {
-    return YEAR_LABELS[min] === 'Freshman'
-      ? 'Freshmen Only'
-      : `${YEAR_LABELS[min]}s Only`;
-  } else if (max === YEAR_LABELS.length - 1) {
-    return YEAR_LABELS[min] === 'Freshman'
-      ? 'Open to Any'
-      : `${YEAR_LABELS[min]}s and Up`;
-  }
-  return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
-};
 
 /**
  * The viewer's relationship to a project, as far as joining it goes:
@@ -64,25 +43,14 @@ export const ProjectCard = ({
 }: ProjectCardProps) => {
   const { data } = useTeamMatching();
 
-  const userYear = data.year;
   const [minYear, maxYear] = project.yearRange;
 
-  // Academic year rolls over on September 1: on/after Sept 1 2026, the class of
-  // 2030 counts as freshmen (index 0), 2029 as sophomores, and so on.
-  const now = new Date();
-  const academicYear = now.getMonth() >= 8 ? now.getFullYear() + 1 : now.getFullYear();
-
-  const allowsFreshmen = minYear === 0;
-  const allowsGradStudents = maxYear === YEAR_LABELS.length - 1;
-
-  // Higher grad year = younger student. If freshmen are allowed, allow any year
-  // above the freshman cutoff too (no upper bound). If grad students are
-  // allowed, allow any year below the grad cutoff too (no lower bound).
-  const minGradYear = allowsGradStudents ? -Infinity : academicYear + 3 - maxYear;
-  const maxGradYear = allowsFreshmen ? Infinity : academicYear + 3 - minYear;
-
+  // Graduate students are stored as GRADUATE_STUDENT rather than a year, so
+  // the standing helper recognises them instead of inferring from a date
+  const standing = getClassStanding(data.year);
+  const hasGraduationYear = standing !== null;
   const isYearMatch =
-    userYear !== null && Number(userYear) >= minGradYear && Number(userYear) <= maxGradYear;
+    hasGraduationYear && standing >= minYear && standing <= maxYear;
 
   const spotsRemaining = project.maxTeamSize - project.currentTeamSize;
   const isMember = membership === 'this';
@@ -118,9 +86,11 @@ export const ProjectCard = ({
               ? 'Unavailable'
               : spotsRemaining <= 0
                 ? 'Full'
-                : !isYearMatch
-                  ? 'Out of year range'
-                  : 'Join';
+                : !hasGraduationYear
+                  ? 'Set your graduation year'
+                  : !isYearMatch
+                    ? 'Out of year range'
+                    : 'Join';
 
   return (
     <div

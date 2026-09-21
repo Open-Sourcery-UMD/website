@@ -6,7 +6,7 @@ import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/
 import { auth } from "@firebaseConfig";
 import { createUserProfile, hashPassword } from "@lib/userService";
 import { getGitHubUser, inviteUserToOrganization } from "@lib/githubService";
-import { TECHNOLOGIES, TOPICS } from "@data";
+import { TECHNOLOGIES, TOPICS, getGraduationYearOptions } from "@data";
 import FormHeader from "@components/forms/FormHeader";
 import FormSection from "@components/forms/FormSection";
 import TextQuestion from "@components/forms/TextQuestion";
@@ -29,7 +29,6 @@ interface SignUpFormData {
   preferredTopics: string[];
 }
 
-const YEAR_OPTIONS = ["2025", "2026", "2027", "2028", "2029", "2030", "2031"];
 const ALL_TECHNOLOGIES = TECHNOLOGIES.flatMap((g) => g.technologies);
 const ALL_TOPICS = TOPICS.flatMap((g) => g.topics);
 
@@ -321,7 +320,7 @@ export default function SignUpPage() {
           >
             <MultipleChoiceQuestion
               question="Graduation Year"
-              options={YEAR_OPTIONS}
+              options={getGraduationYearOptions()}
               isRequired={true}
               value={formData.graduationYear}
               onChange={(value) => setFormData((prev) => ({ ...prev, graduationYear: value }))}

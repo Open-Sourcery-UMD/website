@@ -12,6 +12,96 @@ export function getSemesterStart(now: Date = new Date()): Date {
   if (now >= springStart) return springStart;
   return new Date(year - 1, 8, 1);
 }
+
+// Class standing, as used by a project's yearRange
+export const YEAR_LABELS = [
+  'Freshman',
+  'Sophomore',
+  'Junior',
+  'Senior',
+  'Grad Student',
+];
+
+export const GRAD_STUDENT_STANDING = YEAR_LABELS.length - 1;
+
+/**
+ * Stored in a user's graduationYear when they're a graduate student rather
+ * than an undergrad with a year left to go.
+ */
+export const GRADUATE_STUDENT = 'Graduate Student';
+
+// Graduation years offered: this year through this year + 5
+const GRADUATION_YEAR_SPAN = 5;
+
+/**
+ * The graduation years a user can pick, newest cohort last, followed by the
+ * graduate-student option. Generated from the current year, so the list
+ * doesn't have to be edited each year.
+ */
+export function getGraduationYearOptions(now: Date = new Date()): string[] {
+  const startYear = now.getFullYear();
+  const years: string[] = [];
+
+  for (let year = startYear; year <= startYear + GRADUATION_YEAR_SPAN; year++) {
+    years.push(String(year));
+  }
+
+  return [...years, GRADUATE_STUDENT];
+}
+
+export function isGraduateStudent(graduationYear: string | null): boolean {
+  return graduationYear === GRADUATE_STUDENT;
+}
+
+/**
+ * The academic year a date falls in. It rolls over on September 1, so from
+ * that date the class of 2030 counts as freshmen.
+ */
+export function getAcademicYear(now: Date = new Date()): number {
+  return now.getMonth() >= 8 ? now.getFullYear() + 1 : now.getFullYear();
+}
+
+/**
+ * A user's class standing as an index into YEAR_LABELS (0 = Freshman through
+ * 4 = Grad Student), or null if their profile doesn't say.
+ *
+ * Graduate students are stored as GRADUATE_STUDENT rather than a year, so
+ * they're recognised directly instead of being inferred from a date.
+ */
+export function getClassStanding(
+  graduationYear: string | null,
+  now: Date = new Date()
+): number | null {
+  if (!graduationYear) return null;
+  if (isGraduateStudent(graduationYear)) return GRAD_STUDENT_STANDING;
+
+  const year = Number(graduationYear);
+  if (!Number.isFinite(year)) return null;
+
+  const standing = getAcademicYear(now) + 3 - year;
+
+  // Graduating even later than this year's freshmen still counts as a
+  // freshman, and a graduation year that has already passed counts as a
+  // graduate student
+  return Math.min(Math.max(standing, 0), GRAD_STUDENT_STANDING);
+}
+
+/**
+ * Describes a project's year range, e.g. "Juniors and Up"
+ */
+export function formatYearRange(min: number, max: number): string {
+  if (min === max) {
+    return YEAR_LABELS[min] === 'Freshman'
+      ? 'Freshmen Only'
+      : `${YEAR_LABELS[min]}s Only`;
+  } else if (max === YEAR_LABELS.length - 1) {
+    return YEAR_LABELS[min] === 'Freshman'
+      ? 'Open to Any'
+      : `${YEAR_LABELS[min]}s and Up`;
+  }
+  return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
+}
+
 export const BOARD_MEMBERS = ['Om Arya', 'Shreyas Thirumale', 'Sifene Fufa', 'Lina Hsu', 'Diksha Pal', 'Colin Kurniawan'];
 
 interface TechnologyGroup {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { TECHNOLOGIES, TOPICS } from '@data';
+import { formatYearRange, TECHNOLOGIES, TOPICS, YEAR_LABELS } from '@data';
 import { useAuth } from '@context/AuthContext';
 import { useRouter } from 'next/navigation';
 import FormHeader from '@components/forms/FormHeader';
@@ -16,18 +16,8 @@ import { useUserProjects } from '@hooks/useUserProjects';
 import MultipleChoiceQuestion from '@components/forms/MultipleChoiceQuestion';
 import VerificationGate from '@components/VerificationGate';
 
-const YEAR_LABELS = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Grad Student'];
 const TOPICS_MAX = 20;
 const GITHUB_REPO_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-const formatYearRange = (min: number, max: number) => {
-  if (min === max) {
-    return YEAR_LABELS[min] === 'Freshman'
-      ? 'Freshmen Only'
-      : `${YEAR_LABELS[min]}s Only`;
-  }
-  return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
-};
 
 const PAGE_COUNT = 4;
 const SECTION_LABELS = ['Project Info', 'Team Settings', 'Technologies & Topics', 'Confirmation'];
