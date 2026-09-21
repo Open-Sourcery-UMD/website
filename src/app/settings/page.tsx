@@ -9,6 +9,10 @@ import { updateUserProfile, resendVerificationEmail } from "@lib/userService";
 import { getGitHubUser } from "@lib/githubService";
 import { leaveProject, withdrawProposal } from "@/lib/projectService";
 import { useUserProjects } from "@hooks/useUserProjects";
+import {
+  UNSAVED_CHANGES_MESSAGE,
+  useUnsavedChangesWarning,
+} from "@hooks/useUnsavedChangesWarning";
 import { getGraduationYearOptions, Project, TECHNOLOGIES, TOPICS } from "@data";
 import TextQuestion from "@components/forms/TextQuestion";
 import MultipleChoiceQuestion from "@components/forms/MultipleChoiceQuestion";
@@ -97,6 +101,21 @@ export default function SettingsPage() {
       setOriginalData(initialData);
     }
   }, [firebaseUser, firestoreUser, loading, router]);
+
+  const hasChanges = originalData
+    ? formData.firstName !== originalData.firstName ||
+      formData.lastName !== originalData.lastName ||
+      formData.gitHubUsername !== originalData.gitHubUsername ||
+      formData.discordUsername !== originalData.discordUsername ||
+      formData.graduationYear !== originalData.graduationYear ||
+      formData.technologiesExperiencedWith.join(",") !==
+        originalData.technologiesExperiencedWith.join(",") ||
+      formData.preferredTopics.join(",") !==
+        originalData.preferredTopics.join(",")
+    : false;
+
+  // Covers the navbar, other in-app links, and closing or reloading the tab
+  useUnsavedChangesWarning(hasChanges);
 
   const validateForm = (): boolean => {
     if (!formData.firstName.trim()) {
@@ -204,6 +223,8 @@ export default function SettingsPage() {
   };
 
   const handleCancel = () => {
+    if (hasChanges && !window.confirm(UNSAVED_CHANGES_MESSAGE)) return;
+
     if (originalData) {
       setFormData(originalData);
       setErrorMessage("");
@@ -235,8 +256,9 @@ export default function SettingsPage() {
 
       setTimeout(() => {
         setSuccessMessage("");
-        // Stay put if there are other projects left to manage here
-        if (remaining.length === 0) {
+        // Stay put if there are other projects left to manage here, or if
+        // navigating away would discard unsaved profile edits
+        if (remaining.length === 0 && !hasChanges) {
           router.push("/");
         }
       }, 1000);
@@ -279,6 +301,13 @@ export default function SettingsPage() {
   };
 
   const handleSignOut = async () => {
+    if (
+      hasChanges &&
+      !window.confirm("You have unsaved changes. Sign out without saving them?")
+    ) {
+      return;
+    }
+
     try {
       await signOut(auth);
       setTimeout(() => router.push("/"), 10);
@@ -318,18 +347,6 @@ export default function SettingsPage() {
   }
 
   if (!firebaseUser) return null;
-
-  const hasChanges = originalData
-    ? formData.firstName !== originalData.firstName ||
-      formData.lastName !== originalData.lastName ||
-      formData.gitHubUsername !== originalData.gitHubUsername ||
-      formData.discordUsername !== originalData.discordUsername ||
-      formData.graduationYear !== originalData.graduationYear ||
-      formData.technologiesExperiencedWith.join(",") !==
-        originalData.technologiesExperiencedWith.join(",") ||
-      formData.preferredTopics.join(",") !==
-        originalData.preferredTopics.join(",")
-    : false;
 
   return (
     <VerificationGate>
