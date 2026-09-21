@@ -259,6 +259,61 @@ export function getProjectsForUser(
   });
 }
 
+export interface ProjectLead {
+  uid: string;
+  name: string;
+  email: string;
+  gitHubUsername: string;
+  discordUsername: string;
+}
+
+/**
+ * Fetches the lead developer (point of contact) of each project, keyed by
+ * project id.
+ *
+ * Several projects can share a lead, so each account is read once.
+ */
+export async function getProjectLeads(
+  projects: Project[]
+): Promise<Map<string, ProjectLead>> {
+  const leadUids = Array.from(
+    new Set(projects.map((project) => project.pointOfContact).filter(Boolean))
+  );
+
+  const leadsByUid = new Map<string, ProjectLead>();
+
+  await Promise.all(
+    leadUids.map(async (uid) => {
+      try {
+        const snapshot = await getDoc(doc(collection(db, 'users'), uid));
+        if (!snapshot.exists()) return;
+
+        const data = snapshot.data();
+        const name = [data.firstName, data.lastName].filter(Boolean).join(' ');
+        if (!name) return;
+
+        leadsByUid.set(uid, {
+          uid,
+          name,
+          email: data.email || '',
+          gitHubUsername: data.gitHubUsername || '',
+          discordUsername: data.discordUsername || '',
+        });
+      } catch (error) {
+        console.error(`Error fetching lead developer ${uid}:`, error);
+      }
+    })
+  );
+
+  const leadsByProject = new Map<string, ProjectLead>();
+  for (const project of projects) {
+    const lead = project.pointOfContact && leadsByUid.get(project.pointOfContact);
+    if (lead) leadsByProject.set(project.id, lead);
+  }
+
+  return leadsByProject;
+}
+
 /**
  * The user's project proposals that are still awaiting review - normally at
  * most one.

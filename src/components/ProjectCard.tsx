@@ -1,6 +1,7 @@
 import { Project } from '@data';
 import { useTeamMatching } from '@context/TeamMatchingContext';
-import { FaGithub } from 'react-icons/fa';
+import { ProjectLead } from '@/lib/projectService';
+import { FaDiscord, FaEnvelope, FaGithub } from 'react-icons/fa';
 
 export const YEAR_LABELS = [
   'Freshman',
@@ -44,6 +45,8 @@ export type CardMembership =
 
 interface ProjectCardProps {
   project: Project;
+  /** The project's lead developer, once looked up */
+  lead?: ProjectLead;
   onJoin?: (project: Project) => void;
   membership?: CardMembership;
   /** Disables the button without changing its label, e.g. while another join runs */
@@ -53,6 +56,7 @@ interface ProjectCardProps {
 
 export const ProjectCard = ({
   project,
+  lead,
   onJoin,
   membership = 'none',
   joinLocked = false,
@@ -91,6 +95,13 @@ export const ProjectCard = ({
   const otherTechnologies = project.technologiesUsed.filter(
     (t) => !project.technologiesRequired.includes(t)
   );
+
+  const leadInitials = (lead?.name || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('');
 
   // Membership outranks capacity: "you're on this" matters more than "it's full"
   const buttonLabel = joining
@@ -216,12 +227,66 @@ export const ProjectCard = ({
       </div>
 
       {/* Team Size */}
-      <div className="text-neutral-300 mb-6">
+      <div className="text-neutral-300 mb-4">
         Team Size: {project.maxTeamSize}{' '}
         <span className="text-neutral-400">
           ({Math.max(spotsRemaining, 0)} spot{spotsRemaining !== 1 ? 's' : ''} remaining{spotsRemaining <= 0 && ' - FULL'})
         </span>
       </div>
+
+      {/* Lead Developer - a contact, not another project fact, so it's set
+          apart from the plain rows above */}
+      {lead && (
+        <div className="flex items-center gap-3 mb-6 px-3 py-2.5 rounded-lg bg-neutral-800/40 border border-neutral-700/60">
+          <div className="w-8 h-8 shrink-0 rounded-full bg-neutral-800 text-neutral-300 flex items-center justify-center text-xs font-semibold">
+            {leadInitials || '?'}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-ycs-pink">
+              Lead Developer
+            </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm text-white truncate">{lead.name}</span>
+              {lead.discordUsername && (
+                <span
+                  title={`Discord: ${lead.discordUsername}`}
+                  className="flex items-center gap-1 shrink-0 max-w-[50%] text-xs text-neutral-500"
+                >
+                  <FaDiscord size={12} className="shrink-0" />
+                  <span className="truncate">{lead.discordUsername}</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {lead.gitHubUsername && (
+              <a
+                href={`https://github.com/${lead.gitHubUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`@${lead.gitHubUsername} on GitHub`}
+                // Distinguished from the repository link in the card's corner
+                aria-label={`${lead.name}'s GitHub profile`}
+                className="p-2 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white transition"
+              >
+                <FaGithub size={14} />
+              </a>
+            )}
+            {lead.email && (
+              <a
+                href={`mailto:${lead.email}`}
+                title={`Email ${lead.name}`}
+                aria-label={`Email ${lead.name}, the lead developer`}
+                className="p-2 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white transition"
+              >
+                <FaEnvelope size={14} />
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Join Button */}
       <button

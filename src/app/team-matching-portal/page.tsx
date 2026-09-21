@@ -8,7 +8,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@context/AuthContext';
 import { useUserProjects } from '@hooks/useUserProjects';
-import { getFirestoreProjects, joinProject } from '@/lib/projectService';
+import {
+  getFirestoreProjects,
+  getProjectLeads,
+  joinProject,
+  ProjectLead,
+} from '@/lib/projectService';
 import VerificationGate from '@components/VerificationGate';
 
 function sortBySpotsRemaining(projects: Project[]): Project[] {
@@ -31,6 +36,7 @@ export default function TeamMatchingPortalPage() {
   } = useUserProjects();
 
   const [projects, setProjects] = useState<Project[]>([]);
+  const [leads, setLeads] = useState<Map<string, ProjectLead>>(new Map());
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [error, setError] = useState('');
   const [joiningProjectId, setJoiningProjectId] = useState<string | null>(null);
@@ -45,7 +51,11 @@ export default function TeamMatchingPortalPage() {
   const loadProjects = useCallback(async () => {
     try {
       const data = await getFirestoreProjects();
+      // Fetched before rendering so cards don't pop in a lead a moment later
+      const projectLeads = await getProjectLeads(data);
+
       setProjects(sortBySpotsRemaining(data));
+      setLeads(projectLeads);
     } catch (err) {
       console.error('Error fetching projects:', err);
       setError('Failed to load projects.');
@@ -146,6 +156,7 @@ export default function TeamMatchingPortalPage() {
                 <ProjectCard
                   key={project.id}
                   project={project}
+                  lead={leads.get(project.id)}
                   onJoin={handleJoin}
                   membership={membershipFor(project)}
                   joinLocked={joiningProjectId !== null}
