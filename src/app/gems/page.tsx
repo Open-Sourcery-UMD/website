@@ -72,16 +72,16 @@ export default function GemsPage() {
   return (
     <PageContainer>
       <SectionContainer>
-        <h1 className="text-white text-5xl md:text-7xl font-bold mb-4">Gems</h1>
+        <h1 className="text-graphite text-5xl md:text-7xl font-bold mb-4">Gems</h1>
         {/* Gem Count Section */}
         {firebaseUser && emailVerified && (
           <div className="mb-16">
-            <p className="text-zinc-400 text-2xl mb-2">You have:</p>
+            <p className="text-black text-2xl mb-2">You have:</p>
             {loadingGems ? (
-              <p className="text-zinc-500 text-lg">Loading...</p>
+              <p className="text-graphite-mute text-lg">Loading...</p>
             ) : (
               <>
-                <p className="text-green-300 text-7xl md:text-9xl font-bold mb-8">
+                <p className="text-green-400 text-7xl md:text-9xl font-bold mb-8">
                   {totalGems}
                 </p>
 
@@ -93,9 +93,9 @@ export default function GemsPage() {
                         return (
                           <div
                             key={page * ITEMS_PER_PAGE + i}
-                            className="flex items-center justify-between bg-zinc-800/50 rounded-lg px-4 py-3"
+                            className="flex items-center justify-between bg-white/70 shadow-card rounded-lg px-4 py-3"
                           >
-                            <span className="text-zinc-300 text-sm">{action}</span>
+                            <span className="text-graphite-soft text-sm">{action}</span>
                             <span className="text-ycs-green font-semibold text-sm ml-10 whitespace-nowrap">
                               +{gems}{getUnit(action)}
                             </span>
@@ -109,17 +109,17 @@ export default function GemsPage() {
                         <button
                           onClick={() => setPage((p) => Math.max(0, p - 1))}
                           disabled={page === 0}
-                          className="px-4 py-2 bg-zinc-800 text-white rounded-lg disabled:opacity-30 hover:bg-zinc-700 transition"
+                          className="px-4 py-2 bg-white/80 border border-black/10 text-graphite rounded-full disabled:opacity-30 hover:bg-white transition"
                         >
                           Previous
                         </button>
-                        <span className="text-zinc-400 text-sm">
+                        <span className="text-graphite-mute text-sm">
                           {page + 1} / {totalPages}
                         </span>
                         <button
                           onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                           disabled={page >= totalPages - 1}
-                          className="px-4 py-2 bg-zinc-800 text-white rounded-lg disabled:opacity-30 hover:bg-zinc-700 transition"
+                          className="px-4 py-2 bg-white/80 border border-black/10 text-graphite rounded-full disabled:opacity-30 hover:bg-white transition"
                         >
                           Next
                         </button>
@@ -145,22 +145,22 @@ export default function GemsPage() {
 
         {/* Top Performers Leaderboard */}
         <div className="mb-16">
-          <h2 className="text-white text-3xl md:text-4xl font-bold mb-8">
+          <h2 className="text-graphite text-3xl md:text-4xl font-bold mb-8">
             Leaderboard
           </h2>
           <GemLeaderboard />
         </div>
 
         {/* Two Ways to Earn Gems */}
-        <h2 className="text-white text-3xl md:text-4xl font-bold mb-8">
+        <h2 className="text-graphite text-3xl md:text-4xl font-bold mb-8">
           Two ways to earn Gems:
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Left Card - Green - Attend Events */}
-          <div className="bg-zinc-800/50 bg-gradient-to-br from-ycs-green/20 to-transparent border-l-4 border-ycs-green rounded-2xl p-8 flex flex-col">
-            <h3 className="text-white text-2xl font-bold mb-6">Attend events</h3>
-            <ul className="text-zinc-300 space-y-3 mb-8 flex-grow">
+          <div className="bg-white/70 shadow-card bg-gradient-to-br from-pastel-mint/60 to-transparent border-l-4 border-[#3fc3a3] rounded-2xl p-8 flex flex-col">
+            <h3 className="text-graphite text-2xl font-bold mb-6">Attend events</h3>
+            <ul className="text-graphite-soft space-y-3 mb-8 flex-grow">
               <li className="flex items-start gap-3">
                 <span className="text-ycs-green font-bold mt-0.5">+50</span>
                 <span>Earn 50 Gems for attending Hack Sessions or GBMs</span>
@@ -173,9 +173,9 @@ export default function GemsPage() {
           </div>
 
           {/* Right Card - Blue - Open Source Contributions */}
-          <div className="bg-zinc-800/50 bg-gradient-to-br from-ycs-blue/20 to-transparent border-l-4 border-ycs-blue rounded-2xl p-8 flex flex-col">
-            <h3 className="text-white text-2xl font-bold mb-6">Make open-source contributions</h3>
-            <ul className="text-zinc-300 space-y-3 flex-grow">
+          <div className="bg-white/70 shadow-card bg-gradient-to-br from-pastel-sky/60 to-transparent border-l-4 border-azure rounded-2xl p-8 flex flex-col">
+            <h3 className="text-graphite text-2xl font-bold mb-6">Make open-source contributions</h3>
+            <ul className="text-graphite-soft space-y-3 flex-grow">
               <li className="flex items-start gap-3">
                 <span className="text-ycs-blue font-bold mt-0.5">+30</span>
                 <span>Earn 30 Gems for opening an issue in your project</span>

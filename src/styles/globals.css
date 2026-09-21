@@ -1,31 +1,271 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono&display=swap');
 @import 'prism-themes/themes/prism-dracula.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Fonts are loaded through next/font in layout.tsx (self-hosted, no render
+ * blocking request to Google) and exposed here as CSS variables.
+ */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --canvas: #f0f5fd;
+
+  --hairline: rgba(31, 32, 51, 0.09);
+  --hairline-strong: rgba(31, 32, 51, 0.16);
+
+  --spell: #90c8ff;
+  --azure: #0071bc;
+  --azure-deep: #005a96;
+  --ember: #f45a5a;
+
+  --text-primary: #08080d;
+  --text-secondary: #16161f;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-rgb: #1f232c;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* Carries the pastel through overscroll at the top and bottom */
+    background-color: var(--canvas);
+  }
+
+  body {
+    color: var(--text-primary);
+    /*
+     * Deliberately no background here: html paints the canvas instead. If
+     * body also painted one it would cover every -z-10 decoration, since a
+     * body background is an ordinary in-flow background and paints after
+     * negative z-index children.
+     */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Display type is set tight and dark-optimised; body stays comfortable */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display), var(--font-sans), sans-serif;
+    letter-spacing: -0.03em;
+  }
+
+  ::selection {
+    background: rgba(0, 113, 188, 0.18);
+    color: var(--text-primary);
+  }
+
+  /* A focus ring that's visible on ink without shouting on mouse clicks */
+  :focus-visible {
+    outline: 2px solid var(--spell);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(31, 32, 51, 0.18);
+    border-radius: 99px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(31, 32, 51, 0.3);
+    background-clip: content-box;
   }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: var(--background-rgb);
+@layer components {
+  /*
+   * Small mono label above a heading. The rule before it gives the eye a
+   * starting point and ties the sections together.
+   */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--azure);
+  }
+
+  .eyebrow::before {
+    content: '\2726';
+    width: auto;
+    height: auto;
+    background: none;
+    font-size: 0.8rem;
+    line-height: 1;
+    color: #ff8fd0;
+  }
+
+  .eyebrow-center::after {
+    content: '\2726';
+    font-size: 0.8rem;
+    line-height: 1;
+    color: #ff8fd0;
+  }
+
+  /*
+   * The shared card surface: barely-there fill, a hairline border, and a lit
+   * top edge. The light rim is what stops flat dark cards looking like holes.
+   */
+  .surface {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    /* A lit top edge plus a soft drop - glossy rather than flat */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 12px 30px -14px rgba(31, 32, 51, 0.25);
+    backdrop-filter: blur(14px);
+  }
+
+  .surface-hover {
+    transition:
+      transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.4s ease,
+      box-shadow 0.4s ease;
+  }
+
+  .surface-hover:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 26px 50px -22px rgba(31, 32, 51, 0.3);
+  }
+
+  .text-spell-gradient {
+    background: linear-gradient(
+      100deg,
+      #98f0ff 0%,
+      #439edb 50%,
+      #98f0ff 100%
+    );
+    background-size: 240% 100%;
+    animation: holo-shift 9s linear infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    -webkit-text-stroke: 1.1px rgba(8, 8, 13, 0.22);
+    /* Only a soft ambient shadow: a white offset shadow under the glyphs
+       read as a pale outline tracing every letter */
+    filter: drop-shadow(0 8px 16px rgba(31, 32, 51, 0.16));
+  }
+
+  /*
+   * A clean pill with a gentle gradient between two shades of its own accent.
+   *
+   * Earlier versions mixed white into the top of the fill and then layered a
+   * second white sheen over it, which split the button into a pale half and a
+   * saturated half with a visible seam. One material, one gradient.
+   *
+   * The colours default to the house blue so the class also works where no
+   * tone has been set on the element.
+   */
+  .y2k-button {
+    position: relative;
+    border-radius: 9999px;
+    background-image: linear-gradient(
+      180deg,
+      var(--btn, #9ed2ff) 0%,
+      var(--btn-deep, #58b0ef) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    /* A single hairline of light along the top edge is all the gloss it needs */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 3px 10px -5px rgba(31, 32, 51, 0.35);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      filter 0.2s ease;
+  }
+
+  .y2k-button:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 8px 16px -8px rgba(31, 32, 51, 0.4);
+  }
+
+  /* A four-point star, the punctuation mark of the era */
+  .star {
+    clip-path: polygon(
+      50% 0%,
+      61% 39%,
+      100% 50%,
+      61% 61%,
+      50% 100%,
+      39% 61%,
+      0% 50%,
+      39% 39%
+    );
+  }
+
+  /*
+   * The two ways in. A dark base with a diagonal wash of the card's accent
+   * fading out across it, an accent rule down the left edge, and the wash
+   * deepening on hover. Colours arrive as custom properties from the
+   * component, since Tailwind can't build class names at runtime.
+   */
+  .cta-card {
+    background-color: rgba(255, 255, 255, 0.66);
+    background-image: linear-gradient(to bottom right, var(--wash), transparent);
+    border-left: 4px solid var(--accent);
+    box-shadow: 0 10px 30px -14px rgba(31, 32, 51, 0.2);
+    transition:
+      background-image 0.3s ease,
+      transform 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  .cta-card:hover {
+    background-image: linear-gradient(to bottom right, var(--wash-hover), transparent);
+  }
+
+  .cta-chip {
+    background-color: var(--chip);
+  }
+
+  .cta-button {
+    background-color: var(--btn);
+    transition: background-color 0.3s ease;
+  }
+
+  .cta-button:hover {
+    background-color: var(--btn-hover);
+  }
+
+  /* A thin gradient seam used to close out sections */
+  .rule-gradient {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--hairline-strong),
+      transparent
+    );
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 0.2s;
+  }
+  .animation-delay-400 {
+    animation-delay: 0.4s;
   }
 }
 
@@ -36,23 +276,28 @@ body {
 
 .nav-link {
   position: relative;
-  overflow: hidden;
-  color: white;
+  color: var(--text-secondary);
   cursor: pointer;
   z-index: 20;
+  transition: color 0.25s ease;
 }
 
+.nav-link:hover {
+  color: var(--text-primary);
+}
+
+/* A thin underline that draws in from the left, instead of a heavy block */
 .nav-link::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: 6px;
-  background-color: white;
+  bottom: -6px;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--azure), #7b5cc4);
   transform: scaleX(0);
   transform-origin: bottom right;
-  transition: transform 0.3s ease-out;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-link:hover::after {
@@ -60,15 +305,52 @@ body {
   transform-origin: bottom left;
 }
 
-.gradient-shadow::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 105%;
-  /* filter: blur(10px); */
-  background: radial-gradient(circle, #ffcccc, #ff555b);
+/* The hero crest drifts as if held in the air */
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(1deg);
+  }
+}
+
+.animate-bob {
+  animation: bob 6s ease-in-out infinite;
+}
+
+/*
+ * Motes falling from the crest. Each one carries its own drift, delay and
+ * duration via custom properties so a handful of elements never look like
+ * they're moving in lockstep.
+ */
+@keyframes sparkle-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3) rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), var(--fall)) scale(1) rotate(160deg);
+  }
+}
+
+.sparkle {
+  animation: sparkle-fall var(--duration) ease-in infinite;
+  animation-delay: var(--delay);
+}
+
+@keyframes holo-shift {
+  to {
+    background-position: 240% 0;
+  }
 }
 
 @keyframes fadeIn {
@@ -82,4 +364,19 @@ body {
 
 .animate-fade-in {
   animation: fadeIn 3s forwards;
+}
+
+/* Nothing here is load-bearing, so drop it all when motion isn't wanted */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

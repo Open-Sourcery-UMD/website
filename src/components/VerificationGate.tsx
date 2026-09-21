@@ -18,7 +18,7 @@ export default function VerificationGate({ children }: VerificationGateProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-zinc-400">Loading...</p>
+        <p className="text-graphite-mute">Loading...</p>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export default function VerificationGate({ children }: VerificationGateProps) {
           <button
             onClick={handleResendEmail}
             disabled={resendLoading}
-            className="w-full bg-ycs-blue hover:bg-blue-600 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition mb-4"
+            className="w-full bg-ycs-blue hover:bg-blue-600 disabled:bg-gray-400 text-graphite font-semibold py-2 px-4 rounded-lg transition mb-4"
           >
             {resendLoading ? 'Sending...' : 'Resend Verification Email'}
           </button>

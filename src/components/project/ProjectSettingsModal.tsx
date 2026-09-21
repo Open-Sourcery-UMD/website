@@ -30,8 +30,8 @@ const Pill = ({
     onClick={onClick}
     className={`px-3 py-1 rounded-full text-sm transition ${
       active
-        ? 'bg-ycs-pink text-black font-medium'
-        : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+        ? 'y2k-button text-graphite font-medium'
+        : 'bg-graphite/[0.06] text-graphite-soft hover:bg-graphite/10'
     }`}
   >
     {label}
@@ -143,17 +143,17 @@ const ProjectSettingsModal = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-neutral-900 border border-neutral-700 rounded-xl p-6"
+        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto surface border rounded-xl p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h3 className="text-xl font-semibold text-white">Edit Project</h3>
-            <p className="text-sm text-neutral-400">{project.projectName}</p>
+            <h3 className="text-xl font-semibold text-graphite">Edit Project</h3>
+            <p className="text-sm text-graphite-soft">{project.projectName}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-neutral-400 hover:text-white text-2xl leading-none"
+            className="text-graphite-soft hover:text-graphite text-2xl leading-none"
             aria-label="Close"
           >
             &times;
@@ -168,8 +168,8 @@ const ProjectSettingsModal = ({
 
         {/* Technologies used */}
         <div className="mb-6">
-          <h4 className="text-white font-medium mb-1">Technologies</h4>
-          <p className="text-xs text-neutral-500 mb-3">
+          <h4 className="text-graphite font-medium mb-1">Technologies</h4>
+          <p className="text-xs text-graphite-mute mb-3">
             Everything the project uses. Mark the must-haves as required below.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -186,12 +186,12 @@ const ProjectSettingsModal = ({
 
         {/* Required technologies */}
         <div className="mb-6">
-          <h4 className="text-white font-medium mb-1">Required Technologies</h4>
-          <p className="text-xs text-neutral-500 mb-3">
+          <h4 className="text-graphite font-medium mb-1">Required Technologies</h4>
+          <p className="text-xs text-graphite-mute mb-3">
             Skills a developer needs before joining.
           </p>
           {technologiesUsed.length === 0 ? (
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-graphite-mute">
               Select the technologies this project uses first.
             </p>
           ) : (
@@ -210,12 +210,12 @@ const ProjectSettingsModal = ({
 
         {/* Year range */}
         <div className="mb-6">
-          <h4 className="text-white font-medium mb-3">Year Range</h4>
+          <h4 className="text-graphite font-medium mb-3">Year Range</h4>
           <div className="flex flex-wrap items-center gap-3">
             <select
               value={yearMin}
               onChange={(event) => handleMinYearChange(Number(event.target.value))}
-              className="bg-neutral-800 border border-neutral-700 text-white rounded-lg px-3 py-2 text-sm"
+              className="bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg px-3 py-2 text-sm"
             >
               {YEAR_LABELS.map((label, index) => (
                 <option key={label} value={index}>
@@ -223,11 +223,11 @@ const ProjectSettingsModal = ({
                 </option>
               ))}
             </select>
-            <span className="text-neutral-500">to</span>
+            <span className="text-graphite-mute">to</span>
             <select
               value={yearMax}
               onChange={(event) => setYearMax(Number(event.target.value))}
-              className="bg-neutral-800 border border-neutral-700 text-white rounded-lg px-3 py-2 text-sm"
+              className="bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg px-3 py-2 text-sm"
             >
               {YEAR_LABELS.slice(yearMin).map((label, index) => (
                 <option key={label} value={index + yearMin}>
@@ -239,13 +239,13 @@ const ProjectSettingsModal = ({
         </div>
 
         {/* Transfer leadership */}
-        <div className="mb-6 pt-6 border-t border-neutral-800">
-          <h4 className="text-white font-medium mb-1">Transfer Leadership</h4>
-          <p className="text-xs text-neutral-500 mb-3">
+        <div className="mb-6 pt-6 border-t border-black/5">
+          <h4 className="text-graphite font-medium mb-1">Transfer Leadership</h4>
+          <p className="text-xs text-graphite-mute mb-3">
             Hand the Lead Developer role to another member of the team.
           </p>
           {otherMembers.length === 0 ? (
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-graphite-mute">
               No other active developers with an Open Sourcery account are on
               this project yet.
             </p>
@@ -254,7 +254,7 @@ const ProjectSettingsModal = ({
               <select
                 value={newLeadUid}
                 onChange={(event) => setNewLeadUid(event.target.value)}
-                className="bg-neutral-800 border border-neutral-700 text-white rounded-lg px-3 py-2 text-sm"
+                className="bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Select a developer...</option>
                 {otherMembers.map((member) => (
@@ -266,7 +266,7 @@ const ProjectSettingsModal = ({
               <button
                 onClick={handleTransfer}
                 disabled={!newLeadUid || transferring}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/90 text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/90 text-graphite hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 {transferring ? 'Transferring...' : 'Transfer'}
               </button>
@@ -278,14 +278,14 @@ const ProjectSettingsModal = ({
           <button
             onClick={onClose}
             disabled={saving}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-50 transition"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-graphite/[0.06] text-graphite-soft hover:bg-graphite/10 disabled:opacity-50 transition"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving || technologiesUsed.length === 0}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-ycs-pink text-black hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            className="px-4 py-2 rounded-lg text-sm font-semibold y2k-button text-graphite hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>

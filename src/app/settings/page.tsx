@@ -355,7 +355,7 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-black mb-2">Account Settings</h1>
-          <p className="text-gray-600">Manage your profile and team matching preferences</p>
+          <p className="text-black">Manage your profile and team matching preferences</p>
         </div>
 
         {/* Success Message */}
@@ -373,7 +373,7 @@ export default function SettingsPage() {
         )}
 
         {/* Profile Information Section */}
-        <div className="bg-white rounded-xl p-6 mb-8 shadow-sm border border-gray-100">
+        <div className="surface rounded-2xl p-6 mb-8">
           <h2 className="text-2xl font-semibold text-black mb-6">Profile Information</h2>
 
           {/* Email (Read-only) with Verification Status */}
@@ -472,7 +472,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Team Matching Preferences Section */}
-        <div className="bg-white rounded-xl p-6 mb-8 shadow-sm border border-gray-100">
+        <div className="surface rounded-2xl p-6 mb-8">
           <h2 className="text-2xl font-semibold text-black mb-6">Team Matching Preferences</h2>
 
           {/* Graduation Year */}
@@ -509,7 +509,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Current Project Section */}
-        <div className="bg-white rounded-xl p-6 mb-8 shadow-sm border border-gray-100">
+        <div className="surface rounded-2xl p-6 mb-8">
           <h2 className="text-2xl font-semibold text-black mb-6">
             {myProjects.length > 1 ? "Current Projects" : "Current Project"}
           </h2>

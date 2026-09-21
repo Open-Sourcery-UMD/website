@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
-// import { Inter } from "next/font/google";
-import { DM_Sans } from 'next/font/google';
+import { DM_Sans, Orbitron, Space_Mono } from 'next/font/google';
 import '@styles/globals.css';
-// import localFont from "next/font/local";
 
 import Navbar from '@components/Navbar';
 import EventBar from '@components/EventBar';
@@ -10,14 +8,29 @@ import { Footer } from '@components/Footer';
 import { AuthProvider } from '@context/AuthContext';
 import { TeamMatchingProvider } from '@context/TeamMatchingContext';
 import { EventProvider } from '@context/EventContext';
+import SiteBackground from '@components/SiteBackground';
 
-// const inter = Inter({ subsets: ["latin"] });
+// Body copy: quiet, highly legible
 const dmSans = DM_Sans({
   subsets: ['latin'],
-  variable: '--font-dm-sans',
+  variable: '--font-sans',
   display: 'swap',
 });
-// const mona = localFont({ src: "../fonts/Mona-Sans.woff2" });
+
+// Display: Orbitron is the squared-off techno face the era ran on
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+// Mono: eyebrow labels and anything that should read as machine output
+const spaceMono = Space_Mono({
+  weight: ['400', '700'],
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Open Sourcery',
@@ -34,7 +47,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`  bg-[#000000] text-white ${dmSans.className}`}>
+      <body
+        className={`text-graphite font-sans ${dmSans.variable} ${orbitron.variable} ${spaceMono.variable}`}
+      >
+        <SiteBackground />
         <AuthProvider>
           <TeamMatchingProvider>
             <EventProvider>

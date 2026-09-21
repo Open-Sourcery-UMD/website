@@ -43,6 +43,9 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
 
   let tag = "MISC";
   let imageSrc = "/open_sourcery.png";
+  // Most events have no photo and fall back to the club mark. Blown up to
+  // fill a cover area it fights the text, so those get a crest plate instead.
+
 
   // Main events
   if (lowerSummary.includes("hack session")) {
@@ -68,56 +71,85 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
     imageSrc = "/event-images/jeopardy.png";
   }
 
+  const isCrest = imageSrc.startsWith('/open_sourcery');
+
   return (
     <motion.div
-      className={`bg-zinc-800/50 rounded-lg overflow-hidden group cursor-pointer relative ${
+      className={`surface rounded-3xl overflow-hidden group cursor-pointer relative ${
         isOngoing ? 'animate-sparkle' : ''
       }`}
       whileHover={{ y: -5 }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
     >
-      <div className="relative h-56 overflow-hidden">
-        <Image
-          src={imageSrc}
-          alt={event.summary}
-          width={600}
-          height={400}
-          className={`object-cover w-full h-full transition-transform duration-500 ${
-            isHovered ? "scale-110" : "scale-100"
-          }`}
-        />
+      <div className="relative h-56 overflow-hidden rounded-t-3xl">
+        {isCrest ? (
+          // A quiet plate: house gradient, a faint grid, and the mark held at
+          // a readable size off to one side
+          <div className="absolute inset-0 bg-[radial-gradient(120%_100%_at_15%_0%,rgba(160,205,255,0.95),transparent_64%),radial-gradient(90%_80%_at_100%_100%,rgba(198,210,255,0.85),transparent_62%)]">
+            <div
+              className="absolute inset-0 opacity-[0.5]"
+              style={{
+                backgroundImage:
+                  'linear-gradient(rgba(31,32,51,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(31,32,51,0.05) 1px, transparent 1px)',
+                backgroundSize: '28px 28px',
+              }}
+            />
+            <Image
+              src={imageSrc}
+              alt=""
+              aria-hidden
+              width={220}
+              height={220}
+              // Held inside the frame: a bleeding watermark escaped the card's
+              // rounded corner, since blend modes don't always clip to it
+              className={`absolute right-4 top-4 w-24 opacity-[0.25] mix-blend-multiply transition-transform duration-700 ${
+                isHovered ? 'scale-105 -rotate-3' : 'scale-100'
+              }`}
+            />
+          </div>
+        ) : (
+          <Image
+            src={imageSrc}
+            alt={event.summary}
+            width={600}
+            height={400}
+            className={`object-cover w-full h-full transition-transform duration-500 ${
+              isHovered ? "scale-110" : "scale-100"
+            }`}
+          />
+        )}
 
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 flex items-end">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/60 to-white/95 flex items-end">
           <div className="p-5 w-full">
             {/* Tag */}
             <div className="mb-2">
-              <span className="text-xs bg-ycs-pink/90 text-white px-3 py-1 rounded-full font-medium tracking-wide">
+              <span className="font-mono text-[0.625rem] uppercase tracking-[0.18em] bg-gradient-to-b from-white/90 to-pastel-sky text-azure border border-white px-3 py-1 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                 {tag}
               </span>
             </div>
 
             {/* Summary */}
-            <h3 className="text-white text-xl font-bold">
+            <h3 className="text-graphite text-xl font-semibold tracking-tight">
               {event.summary}
             </h3>
 
             {/* Date + Time */}
-            <p className="text-zinc-300 text-sm mt-1">
+            <p className="text-graphite-soft text-sm mt-1">
               {formatDate(start)} • {formatTimeRange()}
             </p>
 
             {/* Location */}
             {event.location && (
-              <p className="text-zinc-300 text-sm mt-1">
+              <p className="text-graphite-soft text-sm mt-1">
                 📍 {event.location}
               </p>
             )}
 
             {/* Description */}
             {event.description && (
-              <p className="text-zinc-400 text-sm mt-3 line-clamp-2">
+              <p className="text-graphite-mute text-sm mt-3 line-clamp-2">
                 {event.description}
               </p>
             )}
@@ -167,8 +199,9 @@ export default function EventsCalendar() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-6">
+    <div className="max-w-4xl mx-auto flex flex-col">
+      <span className="eyebrow mb-4">What&apos;s on</span>
+      <h2 className="text-3xl sm:text-4xl font-semibold mb-8 tracking-tight">
         Upcoming Events
       </h2>
 
@@ -181,7 +214,7 @@ export default function EventsCalendar() {
         <Link
           href={calendarLink}
           aria-label="Add to Calendar"
-          className="flex items-center text-ycs-pink hover:text-white hover:underline transition-colors duration-300 mt-2 cursor-pointer text-sm"
+          className="flex items-center text-azure hover:text-graphite hover:underline transition-colors duration-300 mt-2 cursor-pointer text-sm"
           target="_blank"
           rel="noopener noreferrer"
         >

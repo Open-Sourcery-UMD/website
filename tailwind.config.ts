@@ -50,10 +50,54 @@ const config: Config = {
         lg: '0 8px 16px var(--tw-shadow-color)',
         xl: '0 16px 32px var(--tw-shadow-color)',
       },
+      fontFamily: {
+        sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'var(--font-sans)', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+      },
       colors: {
+        // Text on the pastel canvas, from headings down to quiet captions
+        graphite: {
+          // Headings and body copy read as black on the pale surfaces
+          DEFAULT: '#08080d',
+          soft: '#16161f',
+          // Reserved for genuine metadata - handles, dates, counts
+          mute: '#5b5d73',
+        },
+        // The canvas itself and the washes that drift across it
+        pastel: {
+          canvas: '#f0f5fd',
+          periwinkle: '#c6d2ff',
+          lilac: '#d9ccff',
+          sky: '#b9dcff',
+          aqua: '#bfe8f7',
+          mint: '#c2f0e4',
+          peach: '#ffd9c7',
+          blush: '#ffcfe4',
+        },
+        ink: {
+          950: '#07070b',
+          900: '#0b0b11',
+          800: '#111119',
+          700: '#181823',
+        },
+        // The house blues: the light spell-glow of the logo, and the deeper
+        // azure it sits on
+        spell: {
+          DEFAULT: '#90c8ff',
+          soft: '#bcdcff',
+          deep: '#3f88d6',
+        },
+        azure: {
+          DEFAULT: '#0071bc',
+          soft: '#4ea3e8',
+          deep: '#004a7c',
+        },
+        ember: '#f45a5a',
         'ycs-black': '#141414',
         'ycs-pink': '#90c8ff',
-        'ycs-faded-pink': '',
+        // Was an empty string, which silently produced broken classes
+        'ycs-faded-pink': '#f2a6b6',
         'ycs-old-pink': '#F45A5A', // strong logo pink
         'ycs-blue': '#0071BC',
         'ycs-green': '#39A393',
@@ -61,7 +105,28 @@ const config: Config = {
         'ycs-gray': '#323844',
         'sparkle-gold': '#FFD700',
       },
+      boxShadow: {
+        // Soft, wide and low-contrast - light-theme cards lift with shadow
+        // rather than with a lit edge
+        card: '0 10px 30px -14px rgba(31,32,51,0.22)',
+        'card-lg': '0 26px 50px -22px rgba(31,32,51,0.28)',
+        glow: '0 0 60px -12px rgba(0,113,188,0.35)',
+      },
       keyframes: {
+        // Two slow, offset drifts keep the background alive without a loop
+        // ever being obvious
+        drift: {
+          '0%, 100%': { transform: 'translate3d(0,0,0) scale(1)' },
+          '50%': { transform: 'translate3d(4%, -3%, 0) scale(1.12)' },
+        },
+        'drift-slow': {
+          '0%, 100%': { transform: 'translate3d(0,0,0) scale(1.05)' },
+          '50%': { transform: 'translate3d(-5%, 4%, 0) scale(0.95)' },
+        },
+        rise: {
+          from: { opacity: '0', transform: 'translateY(14px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
         sparkle: {
           '0%': {
             boxShadow: '0 0 20px 2px rgba(255, 215, 0, 0.8), inset 0 0 20px 2px rgba(255, 215, 0, 0.4)',
@@ -83,6 +148,9 @@ const config: Config = {
       },
       animation: {
         sparkle: 'sparkle 2.5s ease-in-out infinite',
+        drift: 'drift 26s ease-in-out infinite',
+        'drift-slow': 'drift-slow 34s ease-in-out infinite',
+        rise: 'rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both',
       },
       fontSize: {
         big: '200px',

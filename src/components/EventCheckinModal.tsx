@@ -68,13 +68,13 @@ export default function EventCheckinModal({
       onClick={onClose}
     >
       <div
-        className="bg-neutral-900 border border-neutral-700 rounded-2xl p-8 max-w-md w-full mx-4"
+        className="surface border rounded-2xl p-8 max-w-md w-full mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="text-2xl font-bold text-graphite mb-2">
           Event Check-In
         </h2>
-        <p className="text-neutral-400 mb-6">{event.summary}</p>
+        <p className="text-graphite-soft mb-6">{event.summary}</p>
 
         {checkedInLocally ? (
           <div className="text-center">
@@ -83,7 +83,7 @@ export default function EventCheckinModal({
             </div>
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-neutral-700 text-white rounded-lg hover:opacity-90 transition"
+              className="px-6 py-2 bg-white/80 border border-black/10 text-graphite rounded-full hover:bg-white transition"
             >
               Close
             </button>
@@ -99,7 +99,7 @@ export default function EventCheckinModal({
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-3 bg-neutral-700 text-white rounded-lg hover:opacity-90 transition"
+                className="flex-1 px-4 py-3 bg-white/80 border border-black/10 text-graphite rounded-full hover:bg-white transition"
               >
                 Cancel
               </button>

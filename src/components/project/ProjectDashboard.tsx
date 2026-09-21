@@ -67,9 +67,9 @@ const Card = ({
   action?: React.ReactNode;
   children: React.ReactNode;
 }) => (
-  <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 flex flex-col">
+  <div className="surface rounded-2xl p-5 flex flex-col">
     <div className="flex items-center justify-between mb-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-graphite-soft">
         {title}
       </h3>
       {action}
@@ -79,7 +79,7 @@ const Card = ({
 );
 
 const EmptyRow = ({ text }: { text: string }) => (
-  <p className="text-sm text-neutral-500">{text}</p>
+  <p className="text-sm text-graphite-mute">{text}</p>
 );
 
 const ActivityRow = ({ item }: { item: ActivityItem }) => {
@@ -99,10 +99,10 @@ const ActivityRow = ({ item }: { item: ActivityItem }) => {
     >
       <span className={`mt-1 text-[10px] ${dotColor}`}>●</span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm text-neutral-200 truncate group-hover:text-ycs-pink transition">
+        <span className="block text-sm text-graphite truncate group-hover:text-azure transition">
           {item.title}
         </span>
-        <span className="block text-xs text-neutral-500">
+        <span className="block text-xs text-graphite-mute">
           #{item.number} by {item.authorLogin} ·{' '}
           {formatRelative(closed ? item.closedAt : item.createdAt)}
           {item.merged && ' · merged'}
@@ -130,7 +130,7 @@ const ActivityCard = ({
     <Card
       title={title}
       action={
-        <span className="flex items-center gap-1 text-xs text-neutral-500">
+        <span className="flex items-center gap-1 text-xs text-graphite-mute">
           {icon}
           {open.length} open
         </span>
@@ -148,8 +148,8 @@ const ActivityCard = ({
             )}
 
             {closed.length > 0 && (
-              <div className="pt-3 mt-2 border-t border-neutral-800">
-                <p className="text-xs uppercase tracking-wide text-neutral-600 mb-1">
+              <div className="pt-3 mt-2 border-t border-black/5">
+                <p className="text-xs uppercase tracking-wide text-graphite-mute mb-1">
                   Recently closed
                 </p>
                 {closed.map((item) => (
@@ -168,7 +168,7 @@ const TeamCard = ({ members }: { members: ProjectTeamMember[] }) => (
   <Card
     title="Team"
     action={
-      <span className="text-xs text-neutral-500">
+      <span className="text-xs text-graphite-mute">
         {members.length} member{members.length !== 1 ? 's' : ''}
       </span>
     }
@@ -179,36 +179,36 @@ const TeamCard = ({ members }: { members: ProjectTeamMember[] }) => (
       <div className="space-y-3">
         {members.map((member) => (
           <div key={member.uid} className="flex items-center gap-3">
-            <div className="w-8 h-8 shrink-0 rounded-full bg-neutral-800 text-neutral-300 flex items-center justify-center text-xs font-semibold">
+            <div className="w-8 h-8 shrink-0 rounded-full bg-graphite/[0.06] text-graphite-soft flex items-center justify-center text-xs font-semibold">
               {(member.firstName[0] || '?').toUpperCase()}
               {(member.lastName[0] || '').toUpperCase()}
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-white truncate">
+                <span className="text-sm text-graphite truncate">
                   {member.firstName} {member.lastName}
                 </span>
                 {member.isLead && (
-                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-ycs-pink/15 text-ycs-pink text-[10px] font-semibold uppercase tracking-wide">
+                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-ycs-pink/15 text-azure text-[10px] font-semibold uppercase tracking-wide">
                     Lead
                   </span>
                 )}
                 {member.pending && (
                   <span
                     title="Invited to the repository but hasn't accepted yet"
-                    className="shrink-0 px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 text-[10px] font-semibold uppercase tracking-wide"
+                    className="shrink-0 px-2 py-0.5 rounded-full bg-graphite/[0.06] text-graphite-soft text-[10px] font-semibold uppercase tracking-wide"
                   >
                     Invited
                   </span>
                 )}
               </div>
               {member.gitHubOnly ? (
-                <span className="block text-xs text-neutral-500 truncate">
+                <span className="block text-xs text-graphite-mute truncate">
                   GitHub collaborator - no Open Sourcery account
                 </span>
               ) : (
-                <span className="flex items-center gap-1.5 text-xs text-neutral-500 truncate">
+                <span className="flex items-center gap-1.5 text-xs text-graphite-mute truncate">
                   <FaDiscord size={12} className="shrink-0" />
                   {member.discordUsername || 'No Discord username'}
                 </span>
@@ -222,7 +222,7 @@ const TeamCard = ({ members }: { members: ProjectTeamMember[] }) => (
                   target="_blank"
                   rel="noopener noreferrer"
                   title={`@${member.gitHubUsername} on GitHub`}
-                  className="text-neutral-500 hover:text-white transition"
+                  className="text-graphite-mute hover:text-azure transition"
                 >
                   <FaGithub size={16} />
                 </a>
@@ -231,7 +231,7 @@ const TeamCard = ({ members }: { members: ProjectTeamMember[] }) => (
                 <a
                   href={`mailto:${member.email}`}
                   title={`Email ${member.email}`}
-                  className="text-neutral-500 hover:text-white transition"
+                  className="text-graphite-mute hover:text-azure transition"
                 >
                   <FaEnvelope size={16} />
                 </a>
@@ -258,10 +258,10 @@ const CommitsCard = ({ overview }: { overview: ProjectOverview }) => (
             rel="noopener noreferrer"
             className="block group"
           >
-            <span className="block text-sm text-neutral-200 truncate group-hover:text-ycs-pink transition">
+            <span className="block text-sm text-graphite truncate group-hover:text-azure transition">
               {commit.message}
             </span>
-            <span className="block text-xs text-neutral-500">
+            <span className="block text-xs text-graphite-mute">
               {commit.authorName} · {formatRelative(commit.date)}
             </span>
           </a>
@@ -338,19 +338,19 @@ const ProjectSection = ({
 
   return (
     <>
-      <h2 className="text-3xl md:text-4xl font-semibold text-white mb-6">
+      <h2 className="text-3xl md:text-4xl font-semibold text-graphite mb-6">
         Your Project:{' '}
-        <span className="text-ycs-pink">&apos;{project.projectName}&apos;</span>
+        <span className="text-spell-gradient">&apos;{project.projectName}&apos;</span>
       </h2>
 
       {viewerPending && (
-        <div className="mb-4 p-3 rounded-lg bg-ycs-pink/10 border border-ycs-pink/30 text-sm text-neutral-200">
+        <div className="mb-4 p-3 rounded-lg bg-ycs-pink/10 border border-azure/30 text-sm text-graphite">
           Your invitation to this project&apos;s repository is pending &mdash;{' '}
           <a
             href={`https://github.com/${GITHUB_ORG}/${project.repositoryName}/invitations`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-ycs-pink underline"
+            className="text-azure underline"
           >
             accept it on GitHub
           </a>{' '}
@@ -359,39 +359,39 @@ const ProjectSection = ({
       )}
 
       {loading ? (
-        <p className="text-neutral-500">Loading project...</p>
+        <p className="text-graphite-mute">Loading project...</p>
       ) : (
         <div className="space-y-4">
           {/* Repository header */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="surface border rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-lg font-semibold text-white">
+                <span className="text-lg font-semibold text-graphite">
                   {repository?.name || project.repositoryName}
                 </span>
-                <span className="flex items-center gap-1 text-sm text-neutral-400">
+                <span className="flex items-center gap-1 text-sm text-graphite-soft">
                   <FaStar size={13} className="text-sparkle-gold" />
                   {repository?.stars ?? 0}
                 </span>
-                <span className="flex items-center gap-1 text-sm text-neutral-400">
+                <span className="flex items-center gap-1 text-sm text-graphite-soft">
                   <FaCodeBranch size={13} />
                   {repository?.forks ?? 0}
                 </span>
                 {repository?.language && (
-                  <span className="text-sm text-neutral-500">
+                  <span className="text-sm text-graphite-mute">
                     {repository.language}
                   </span>
                 )}
                 {project.status === 'ARCHIVED' && (
-                  <span className="px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 text-[10px] font-semibold uppercase tracking-wide">
+                  <span className="px-2 py-0.5 rounded-full bg-graphite/[0.06] text-graphite-soft text-[10px] font-semibold uppercase tracking-wide">
                     Archived
                   </span>
                 )}
               </div>
-              <p className="text-sm text-neutral-500 mt-1 line-clamp-2">
+              <p className="text-sm text-graphite-mute mt-1 line-clamp-2">
                 {repository?.description || project.description}
               </p>
-              <p className="text-xs text-neutral-600 mt-1">
+              <p className="text-xs text-graphite-mute mt-1">
                 {formatYearRange(project.yearRange[0], project.yearRange[1])} ·{' '}
                 {members.length}/{project.maxTeamSize} developers
               </p>
@@ -401,19 +401,25 @@ const ProjectSection = ({
               {isLead && (
                 <button
                   onClick={() => setShowSettings(true)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-neutral-800 text-neutral-200 hover:bg-neutral-700 transition"
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-graphite/[0.06] text-graphite hover:bg-graphite/10 transition"
                 >
                   Edit Project
                 </button>
               )}
+              {/* The mark alone: the destination is obvious, and it matches
+                  the bare icons used on the team roster */}
               <a
                 href={repoUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-ycs-pink text-black hover:opacity-90 transition"
+                title="View repository on GitHub"
+                aria-label="View repository on GitHub"
+                className="group shrink-0"
               >
-                <FaGithub size={16} />
-                View Repository
+                <FaGithub
+                  size={20}
+                  className="text-graphite-soft transition-transform duration-200 group-hover:scale-125 group-hover:text-graphite"
+                />
               </a>
             </div>
           </div>

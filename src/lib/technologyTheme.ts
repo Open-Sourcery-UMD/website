@@ -57,9 +57,9 @@ const TECHNOLOGY_COLORS: Record<string, string> = {
 /** Used when a project lists nothing, or something not in the map */
 export const DEFAULT_TECHNOLOGY_COLOR = '#90c8ff';
 
-// Text needs to stay legible on the near-black card, so colours below this
-// relative luminance are mixed toward white until they clear it
-const MIN_TEXT_LUMINANCE = 0.3;
+// Text sits on a pale card, so colours above this relative luminance are
+// mixed toward black until they're dark enough to read
+const MAX_TEXT_LUMINANCE = 0.22;
 
 function hexToRgb(hex: string): [number, number, number] {
   const value = hex.replace('#', '');
@@ -146,18 +146,18 @@ export function getTechnologyColor(technology: string | null): string {
 }
 
 /**
- * The same colour, lightened if needed until it reads clearly as text on a
- * dark background. Keeps the hue, so it still looks like the brand.
+ * The same colour, darkened if needed until it reads clearly as text on a
+ * pale background. Keeps the hue, so it still looks like the brand.
  */
 export function getReadableColor(color: string): string {
   let [r, g, b] = hexToRgb(color);
   let hex = rgbToHex(r, g, b);
 
-  // Each pass closes a quarter of the remaining distance to white
-  for (let pass = 0; pass < 8 && relativeLuminance(hex) < MIN_TEXT_LUMINANCE; pass++) {
-    r = Math.round(r + (255 - r) * 0.25);
-    g = Math.round(g + (255 - g) * 0.25);
-    b = Math.round(b + (255 - b) * 0.25);
+  // Each pass closes a quarter of the remaining distance to black
+  for (let pass = 0; pass < 8 && relativeLuminance(hex) > MAX_TEXT_LUMINANCE; pass++) {
+    r = Math.round(r * 0.75);
+    g = Math.round(g * 0.75);
+    b = Math.round(b * 0.75);
     hex = rgbToHex(r, g, b);
   }
 

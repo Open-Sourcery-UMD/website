@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { TitleSubtitle } from '@components/TitleSubtitle';
 import { GradientBox } from '@components/GradientBox';
 import EventsCalendar from '@components/EventsCalendar';
+import HeroShield from '@components/HeroShield';
 import ProjectDashboard from '@components/project/ProjectDashboard';
 import Image from 'next/image';
 import { useAuth } from '@context/AuthContext';
@@ -46,40 +47,80 @@ const Home = () => {
 
   return (
     <PageContainer>
-      <div className="hidden md:flex justify-start items-start fixed top-0 left-0 w-full h-full -z-10">
-        <div
-          className="opacity-[0.03]"
-          style={{
-            position: 'absolute',
-            top: '0%',
-            left: '17%',
-          }}
-        >
-          <Image src="/open_sourcery_mono.png" alt="Open Sourcery Logo" width={1000} height={1000} />
-        </div>
+      {/*
+        The mono crest, part of the fixed backdrop rather than the hero, so it
+        holds its place as the page scrolls past. The artwork is light, so it's
+        inverted for the pale canvas, and it bleeds off the left edge to keep
+        clear of the centred content.
+      */}
+      <div className="pointer-events-none fixed -left-[12%] top-1/2 -z-10 hidden -translate-y-1/2 opacity-[0.05] invert md:block">
+        <Image
+          src="/open_sourcery_mono.png"
+          alt=""
+          aria-hidden
+          width={780}
+          height={780}
+          priority
+        />
       </div>
 
-      <SectionContainer>
-        <p className="text-white font-semibold text-3xl md:text-5xl mb-4 bg-gradient-to-r from-ycs-pink to-ycs-pink text-transparent bg-clip-text">
-          We are
-        </p>
-        <h1 className="text-white text-4xl sm:text-6xl md:text-8xl font-semibold">
-          <span className="whitespace-normal sm:whitespace-nowrap">
-            {displayText}
-            <span
-              className={`${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-100`}
-            >
-              |
+      <SectionContainer className="relative pt-0 sm:pt-2 lg:pt-6">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          {/* min-w-0 keeps the headline from widening its column */}
+          <div className="min-w-0">
+        <span className="eyebrow animate-rise">Open source at Maryland</span>
+
+        <h1 className="mt-7 text-graphite text-[2.75rem] leading-[1.02] sm:text-7xl lg:text-8xl font-semibold animate-rise animation-delay-200">
+          <span className="block text-black text-2xl sm:text-4xl lg:text-5xl font-normal tracking-tight mb-3">
+            We are
+          </span>
+          {/*
+            The typed text is laid over a full-width copy of the final string,
+            so the headline occupies its finished size from the first frame and
+            the crest beside it never gets pushed while typing.
+          */}
+          <span className="relative inline-block whitespace-normal sm:whitespace-nowrap">
+            <span aria-hidden className="invisible">
+              {fullText}
+            </span>
+            <span className="absolute inset-0">
+              <span className="text-spell-gradient">{displayText}</span>
+              <span
+                aria-hidden
+                className={`${showCursor ? 'opacity-100' : 'opacity-0'} text-azure font-light transition-opacity duration-100`}
+              >
+                |
+              </span>
             </span>
           </span>
         </h1>
 
-        <div className="mt-16 text-xl">
-          <p className="text-white max-w-3xl">
-            Open Sourcery is a group of developers at the <Link href={umdLink} target='_blank' className='text-ycs-pink'>University of Maryland, College Park</Link> who build open-source software applications and connect over our shared love for creating.
+        <div className="mt-10 max-w-2xl animate-rise animation-delay-400">
+          <p className="text-lg sm:text-xl leading-relaxed text-graphite-soft">
+            Open Sourcery is a group of developers at the{' '}
+            <Link
+              href={umdLink}
+              target="_blank"
+              className="text-graphite border-b border-graphite/25 hover:border-azure hover:text-azure transition-colors duration-300"
+            >
+              University of Maryland, College Park
+            </Link>{' '}
+            who build open-source software applications and connect over our shared
+            love for creating.
           </p>
           <ExploreLink href={openSourceryProjectsLink} />
         </div>
+          </div>
+
+          {/* The crest, floating beside the wordmark */}
+          {/* Sits at the far edge of its column, clear of the headline */}
+          <div className="hidden lg:block justify-self-end lg:translate-x-6 xl:translate-x-10 animate-rise animation-delay-400">
+            <HeroShield />
+          </div>
+        </div>
+
+        {/* Closes the hero and separates it from the calendar below */}
+        <div className="rule-gradient mt-16" />
       </SectionContainer>
 
       <SectionContainer>
@@ -88,14 +129,15 @@ const Home = () => {
 
       <SectionContainer>
         <TitleSubtitle
+          eyebrow="Get involved"
           title="Join Us"
           subtitle="Take part in UMD's open-source community"
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-14">
           <GradientBox
             title="Start a new project"
-            color="pink"
+            color="orange"
             text="Have a cool idea? Fill out our project proposal form to become a Lead Developer of an open-source project team and connect with likeminded contributors."
             link="/project-proposal-form"
             label="Start a Project"

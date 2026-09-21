@@ -110,10 +110,10 @@ export default function TeamMatchingPortalPage() {
     <VerificationGate>
       <PageContainer>
         <SectionContainer>
-          <h1 className="text-4xl md:text-6xl font-semibold mb-2 text-ycs-pink">
+          <h1 className="text-4xl md:text-6xl font-semibold mb-2 text-azure">
             Team Matching Portal
           </h1>
-          <p className="mb-6 text-gray-400">
+          <p className="mb-6 text-black">
             This portal displays all active projects within Open Sourcery, launched and led by our members.
             Find one matching your skills and interests, and join a team as a Developer to start contributing today!
           </p>
@@ -147,9 +147,9 @@ export default function TeamMatchingPortalPage() {
           )}
 
           {loadingProjects ? (
-            <p className="text-neutral-400">Loading projects...</p>
+            <p className="text-graphite-soft">Loading projects...</p>
           ) : projects.length === 0 ? (
-            <p className="text-neutral-400">No projects available yet.</p>
+            <p className="text-graphite-soft">No projects available yet.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {projects.map((project) => (

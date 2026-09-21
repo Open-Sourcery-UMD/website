@@ -99,9 +99,9 @@ export const ProjectCard = ({
 
   return (
     <div
-      className={`relative ${spotsRemaining <= 0 && !isMember ? 'opacity-60' : ''} bg-neutral-900 border ${
-        isMember ? 'border-ycs-pink' : ''
-      } rounded-xl p-6 flex flex-col`}
+      className={`relative ${spotsRemaining <= 0 && !isMember ? 'opacity-60' : ''} surface ${
+        isMember ? 'ring-2 ring-azure/60' : ''
+      } rounded-3xl p-6 flex flex-col`}
       style={{
         // The pink border marks the viewer's own project, so the theme gives
         // way to it there; 59 and 14 are ~35% and ~8% alpha
@@ -121,13 +121,15 @@ export const ProjectCard = ({
           {/* Icon */}
           <FaGithub
             size={22}
-            className="text-neutral-400 transition-transform duration-200 group-hover:scale-125 group-hover:text-white"
+            className="text-graphite-soft transition-transform duration-200 group-hover:scale-125 group-hover:text-graphite"
           />
 
           {/* Tooltip */}
-          <div className="absolute -top-9 right-1/2 translate-x-1/2 
-                          bg-black text-white text-xs px-2 py-1 
-                          rounded opacity-0 scale-95
+          {/* Dark pill, light label - it had ended up near-black on black,
+              which read as an empty bar above the icon */}
+          <div className="absolute -top-9 right-1/2 translate-x-1/2
+                          bg-graphite/95 text-white text-[11px] px-2.5 py-1
+                          rounded-full shadow-card opacity-0 scale-95
                           transition-all duration-200
                           group-hover:opacity-100 group-hover:scale-100
                           pointer-events-none whitespace-nowrap">
@@ -135,7 +137,7 @@ export const ProjectCard = ({
           </div>
         </div>
       </a>
-      <h2 className="text-2xl font-semibold text-white mb-2">
+      <h2 className="text-2xl font-semibold text-graphite mb-2">
         {project.projectName}
       </h2>
 
@@ -152,13 +154,13 @@ export const ProjectCard = ({
         </span>
       )}
 
-      <p className="text-neutral-400 mb-6">
+      <p className="text-graphite-soft mb-6">
         {project.description}
       </p>
 
       {/* Required Technologies */}
       <div className="mb-6">
-        <h3 className="text-white font-semibold mb-2">
+        <h3 className="text-graphite font-semibold mb-2">
           Required Technologies
         </h3>
         <div className="grid grid-cols-2 gap-2">
@@ -166,7 +168,7 @@ export const ProjectCard = ({
             ? project.technologiesRequired.map((tech) => {
               const has = data.technologies.includes(tech);
               return (
-                <div key={tech} className="flex items-center gap-2 text-white">
+                <div key={tech} className="flex items-center gap-2 text-graphite">
                   <span className={has ? 'text-green-400' : 'text-red-400'}>
                     {has ? '✔' : '✖'}
                   </span>
@@ -182,10 +184,10 @@ export const ProjectCard = ({
       {/* Other Technologies */}
       {otherTechnologies.length > 0 &&
         <div className="mb-6">
-          <h3 className="text-white font-semibold mb-2">
+          <h3 className="text-graphite font-semibold mb-2">
             Other Technologies
           </h3>
-          <div className="grid grid-cols-2 gap-2 text-neutral-300">
+          <div className="grid grid-cols-2 gap-2 text-graphite-soft">
             {otherTechnologies.map((tech) => (
                 <div key={tech}>{tech}</div>
               ))}
@@ -201,8 +203,8 @@ export const ProjectCard = ({
               key={topic}
               className={`px-3 py-1 rounded-full text-sm ${
                 preferred
-                  ? 'bg-ycs-pink text-black'
-                  : 'bg-neutral-800 text-white'
+                  ? 'y2k-button text-graphite'
+                  : 'bg-graphite/[0.06] text-graphite'
               }`}
             >
               {topic}
@@ -212,7 +214,7 @@ export const ProjectCard = ({
       </div>
 
       {/* Year Range */}
-      <div className="flex items-center gap-2 text-white mb-2">
+      <div className="flex items-center gap-2 text-graphite mb-2">
         <span className={isYearMatch ? 'text-green-400' : 'text-red-400'}>
           {isYearMatch ? '✔' : '✖'}
         </span>
@@ -223,9 +225,9 @@ export const ProjectCard = ({
       </div>
 
       {/* Team Size */}
-      <div className="text-neutral-300 mb-4">
+      <div className="text-graphite-soft mb-4">
         Team Size: {project.maxTeamSize}{' '}
-        <span className="text-neutral-400">
+        <span className="text-graphite-soft">
           ({Math.max(spotsRemaining, 0)} spot{spotsRemaining !== 1 ? 's' : ''} remaining{spotsRemaining <= 0 && ' - FULL'})
         </span>
       </div>
@@ -233,21 +235,21 @@ export const ProjectCard = ({
       {/* Lead Developer - a contact, not another project fact, so it's set
           apart from the plain rows above */}
       {lead && (
-        <div className="flex items-center gap-3 mb-6 px-3 py-2.5 rounded-lg bg-neutral-800/40 border border-neutral-700/60">
-          <div className="w-8 h-8 shrink-0 rounded-full bg-neutral-800 text-neutral-300 flex items-center justify-center text-xs font-semibold">
+        <div className="flex items-center gap-3 mb-6 px-3 py-2.5 rounded-lg bg-white/60 border border-black/10/60">
+          <div className="w-8 h-8 shrink-0 rounded-full bg-graphite/[0.06] text-graphite-soft flex items-center justify-center text-xs font-semibold">
             {leadInitials || '?'}
           </div>
 
           <div className="min-w-0 flex-1">
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-ycs-pink">
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-azure">
               Lead Developer
             </span>
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm text-white truncate">{lead.name}</span>
+              <span className="text-sm text-graphite truncate">{lead.name}</span>
               {lead.discordUsername && (
                 <span
                   title={`Discord: ${lead.discordUsername}`}
-                  className="flex items-center gap-1 shrink-0 max-w-[50%] text-xs text-neutral-500"
+                  className="flex items-center gap-1 shrink-0 max-w-[50%] text-xs text-graphite-mute"
                 >
                   <FaDiscord size={12} className="shrink-0" />
                   <span className="truncate">{lead.discordUsername}</span>
@@ -265,7 +267,7 @@ export const ProjectCard = ({
                 title={`@${lead.gitHubUsername} on GitHub`}
                 // Distinguished from the repository link in the card's corner
                 aria-label={`${lead.name}'s GitHub profile`}
-                className="p-2 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white transition"
+                className="p-2 rounded-lg bg-graphite/[0.06] text-graphite-soft hover:bg-graphite/10 hover:text-azure transition"
               >
                 <FaGithub size={14} />
               </a>
@@ -275,7 +277,7 @@ export const ProjectCard = ({
                 href={`mailto:${lead.email}`}
                 title={`Email ${lead.name}`}
                 aria-label={`Email ${lead.name}, the lead developer`}
-                className="p-2 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white transition"
+                className="p-2 rounded-lg bg-graphite/[0.06] text-graphite-soft hover:bg-graphite/10 hover:text-azure transition"
               >
                 <FaEnvelope size={14} />
               </a>
@@ -290,8 +292,8 @@ export const ProjectCard = ({
         onClick={() => onJoin?.(project)}
         className={`mt-auto w-full py-3 rounded font-semibold transition ${
           !isFullOrDisabled && !joining
-            ? 'bg-ycs-pink text-black hover:opacity-90 cursor-pointer'
-            : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
+            ? 'y2k-button text-graphite hover:opacity-90 cursor-pointer'
+            : 'bg-graphite/[0.07] text-graphite-mute cursor-not-allowed'
         }`}
       >
         {buttonLabel}

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { MouseEvent, useEffect, useState } from 'react';
 import { NavbarMobileMenu } from './NavbarMobileMenu';
 import NavbarIcon from './NavbarIcon';
 
@@ -25,8 +26,19 @@ export const navigationItems = [
 ];
 
 function Navbar() {
+  const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // The bar floats free over the hero and only takes on a surface once the
+  // page has moved under it
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -41,17 +53,50 @@ function Navbar() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  /**
+   * On the home page the crest glides back to the top instead of re-navigating
+   * to a route we're already on, which would jump there instantly.
+   */
+  const handleCrestClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (pathname !== '/') return;
+
+    event.preventDefault();
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+  };
+
   return (
     <>
-      <div className="gradient-shadow fixed w-full h-24 z-20"></div>
-      <nav className="flex flex-row items-center justify-between bg-black text-white p-8 w-full fixed z-20">
-        <Link href="/" className="font-extrabold pl-2 text-3xl">
-          <Image src="/open_sourcery.png" alt="Open Sourcery Logo" width={80} height={80} />
+      <nav
+        className={`fixed z-20 w-full flex flex-row items-center justify-between px-6 sm:px-8 text-graphite transition-all duration-500 ${
+          isScrolled
+            ? 'py-3 bg-white/70 backdrop-blur-xl border-b border-black/5 shadow-[0_8px_30px_-24px_rgba(31,32,51,0.5)]'
+            : 'py-6 bg-transparent border-b border-transparent'
+        }`}
+      >
+        <Link
+          href="/"
+          onClick={handleCrestClick}
+          aria-label="Open Sourcery home"
+          className="relative shrink-0 transition-transform duration-500 hover:scale-105"
+        >
+          {/* A faint sigil glow behind the mark */}
+          <span className="absolute inset-0 -z-10 rounded-full bg-azure/20 blur-xl" />
+          <Image
+            src="/open_sourcery.png"
+            alt="Open Sourcery Logo"
+            width={isScrolled ? 52 : 68}
+            height={isScrolled ? 52 : 68}
+            className="transition-all duration-500"
+          />
         </Link>
         {isMobile ? (
           <NavbarMobileMenu />
         ) : (
-          <ul className="flex gap-12 text-lg">
+          <ul className="flex items-center gap-10 text-[0.95rem] tracking-wide">
             {navigationItems.map((item, index) => (
               <div
                 key={index}
@@ -61,23 +106,31 @@ function Navbar() {
               >
                 <Link
                   href={item.link ? item.link : ''}
-                  className={`nav-link transform duration-100 px-2 pb-2 top-[6px] text-${item.color} ${item.link ? '' : 'pointer-events-none'}`}
+                  // No vertical nudge here: .nav-link is position:relative, so
+                  // an offset shifted the labels off the row's centre line and
+                  // left the account icon looking misaligned
+                  className={`nav-link px-2 ${item.link ? '' : 'pointer-events-none'}`}
                   target={!item.link?.startsWith('/') ? '_blank' : undefined}
                 >
                   {item.name}
                 </Link>
                 {item.subItems && activeDropdown === item.name && (
-                  <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg z-50 py-2">
-                    {item.subItems.map((subItem, subIndex) => (
-                      <li key={subIndex}>
-                        <Link
-                          href={subItem.link}
-                          className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition-colors"
-                        >
-                          {subItem.name}
-                        </Link>
-                      </li>
-                    ))}
+                  // The padding is the hover bridge: with a plain margin the
+                  // pointer crosses dead space on the way down and the menu
+                  // closes before it can be clicked
+                  <div className="absolute right-0 top-full z-50 w-48 pt-3">
+                    <div className="surface rounded-xl py-2 animate-rise">
+                      {item.subItems.map((subItem, subIndex) => (
+                        <li key={subIndex}>
+                          <Link
+                            href={subItem.link}
+                            className="block px-4 py-2 text-sm text-graphite-soft hover:text-graphite hover:bg-azure/5 transition-colors"
+                          >
+                            {subItem.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

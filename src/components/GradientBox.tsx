@@ -1,93 +1,63 @@
 import Link from 'next/link';
-import { FC } from 'react';
+import { CSSProperties, FC } from 'react';
+
+type Tone = 'orange' | 'pink' | 'blue' | 'green' | 'red';
 
 interface Props {
   title: string;
   text: string;
-  color: 'pink' | 'blue' | 'green' | 'faded-pink' | 'red';
+  color: Tone;
   link?: string;
   label?: string;
   icon?: React.ReactNode;
 }
 
+// Brighter, candy-coloured tones, each with a deeper base for the gloss
+const TONES: Record<Tone, { accent: string; deep: string }> = {
+  orange: { accent: '#ffb057', deep: '#f4832b' },
+  pink: { accent: '#ff9ed2', deep: '#ee5fae' },
+  blue: { accent: '#8fd0ff', deep: '#3da2ee' },
+  green: { accent: '#9df0d8', deep: '#3fc3a3' },
+  red: { accent: '#ffa3a3', deep: '#f05f5f' },
+};
+
 export const GradientBox: FC<Props> = ({ title, text, color, link, label, icon }) => {
-  let gradientColors;
-  let hoverGradient;
-  let borderColor;
-  let iconBg;
-  let buttonBg;
+  const { accent, deep } = TONES[color] ?? TONES.blue;
 
-  switch (color) {
-    case 'pink':
-      gradientColors = 'from-ycs-old-pink/20 to-transparent';
-      hoverGradient = 'hover:from-ycs-old-pink/30';
-      borderColor = 'border-ycs-old-pink';
-      iconBg = 'bg-ycs-old-pink/20';
-      buttonBg = 'bg-ycs-old-pink';
-      break;
-    case 'faded-pink':
-      gradientColors = 'from-ycs-faded-pink/20 to-transparent';
-      hoverGradient = 'hover:from-ycs-faded-pink/30';
-      borderColor = 'border-ycs-faded-pink';
-      iconBg = 'bg-ycs-faded-pink/20';
-      buttonBg = 'bg-ycs-faded-pink';
-      break;
-    case 'blue':
-      gradientColors = 'from-ycs-blue/20 to-transparent';
-      hoverGradient = 'hover:from-ycs-blue/30';
-      borderColor = 'border-ycs-blue';
-      iconBg = 'bg-ycs-blue/20';
-      buttonBg = 'bg-ycs-blue';
-      break;
-    case 'green':
-      gradientColors = 'from-ycs-green/20 to-transparent';
-      hoverGradient = 'hover:from-ycs-green/30';
-      borderColor = 'border-ycs-green';
-      iconBg = 'bg-ycs-green/20';
-      buttonBg = 'bg-ycs-green';
-      break;
-    case 'red':
-      gradientColors = 'from-ycs-security-red/20 to-transparent';
-      hoverGradient = 'hover:from-ycs-security-red/30';
-      borderColor = 'border-ycs-security-red';
-      iconBg = 'bg-ycs-security-red/20';
-      buttonBg = 'bg-ycs-security-red';
-      break;
-    default:
-      gradientColors = 'from-ycs-pink/20 to-transparent';
-      hoverGradient = 'hover:from-ycs-pink/30';
-      borderColor = 'border-ycs-pink';
-      iconBg = 'bg-ycs-pink/20';
-      buttonBg = 'bg-ycs-pink';
-  }
+  // Alpha suffixes on the hex: 33 = 20%, 52 = 32%, 59 = 35%
+  const tone = {
+    '--accent': deep,
+    '--wash': `${accent}52`,
+    '--wash-hover': `${accent}80`,
+    '--chip': `${accent}59`,
+    '--btn': accent,
+    '--btn-deep': deep,
+  } as CSSProperties;
 
-  const content = (
+  return (
     <div
-      className={`w-full text-left bg-zinc-800/50 bg-gradient-to-br ${gradientColors} ${hoverGradient} 
-      border-l-4 ${borderColor} rounded-2xl p-8 transition-all duration-300 
-      hover:shadow-lg hover:translate-y-[-4px] relative h-full`}
+      className="cta-card relative h-full w-full rounded-3xl p-8 text-left hover:-translate-y-1"
+      style={tone}
     >
-      <div className="flex flex-col h-full">
-        <div className="flex items-center mb-4">
-          {icon && <div className={`p-3 rounded-lg ${iconBg} mr-4 text-white`}>{icon}</div>}
-          <h3 className="text-white text-2xl font-bold">{title}</h3>
+      <div className="flex h-full flex-col">
+        <div className="mb-4 flex items-center">
+          {icon && <div className="cta-chip mr-4 rounded-full p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]" style={{ color: deep }}>{icon}</div>}
+          <h3 className="text-2xl font-bold text-graphite">{title}</h3>
         </div>
 
-        <p className="text-zinc-300 text-base lg:text-lg mb-6 flex-grow">{text}</p>
+        <p className="mb-6 flex-grow text-base leading-relaxed text-graphite-soft lg:text-lg">
+          {text}
+        </p>
 
-        {link && label && 
+        {link && label && (
           <Link
             href={link}
-            className={`flex self-center justify-center align-center py-3 px-8 rounded-xl text-center cursor-pointer ${buttonBg} bg-opacity-40 hover:bg-opacity-70 transition-colors duration-300`}
+            className="y2k-button flex cursor-pointer justify-center self-center px-9 py-3 text-center font-semibold text-graphite"
           >
-            <p className="m-auto">
-              {label}
-            </p>
+            {label}
           </Link>
-        }
+        )}
       </div>
     </div>
   );
-
-  return content;
 };

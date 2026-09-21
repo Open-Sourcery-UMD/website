@@ -6,22 +6,39 @@ interface FooterIconProps {
   link: string;
   ariaLabel: string;
   icon: React.ReactElement;
+  /** The brand fill that floods in behind the glyph on hover */
+  fill: string;
 }
 
 const FooterIcon: React.FC<FooterIconProps> = (props: FooterIconProps) => {
-  const resizedIcon = cloneElement(props.icon, { size: 40 });
+  const resizedIcon = cloneElement(props.icon, { size: 18 });
 
   return (
     <Link
       href={props.link}
-      className="h-7 transform transition-transform hover:scale-110 hover:duration-200"
+      className="surface group relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full text-graphite-soft transition-all duration-300 hover:-translate-y-0.5 hover:text-white"
       aria-label={props.ariaLabel}
       target="_blank"
       rel="noopener noreferrer"
     >
-      {resizedIcon}
+      {/* Splashes out from the centre rather than just switching colour */}
+      <span
+        aria-hidden
+        className="absolute inset-0 scale-0 rounded-full opacity-0 transition-all duration-300 ease-out group-hover:scale-100 group-hover:opacity-100"
+        style={{ background: props.fill }}
+      />
+      <span className="relative">{resizedIcon}</span>
     </Link>
   );
+};
+
+// Each service's own colours: a manila-envelope brown for mail, GitHub's
+// near-black, and Instagram's corner-lit gradient
+const FILLS = {
+  email: 'linear-gradient(135deg, #b3855a 0%, #7a5433 100%)',
+  github: 'linear-gradient(135deg, #3a4149 0%, #0d1117 100%)',
+  instagram:
+    'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%)',
 };
 
 interface Props {
@@ -30,27 +47,39 @@ interface Props {
 
 export const Footer = ({ className }: Props) => {
   return (
-    <footer className={`flex flex-col text-white z-20 justify-normal items-center ${className}`}>
-      <div className="text-white text-xl mb-1">Get in touch with us</div>
-      <div className="flex justify-center gap-6 p-3">
-        <FooterIcon
-          link="mailto:umdopensourcery@gmail.com"
-          ariaLabel="Email"
-          icon={<FaRegEnvelope />}
-        />
-        <FooterIcon
-          link="https://github.com/open-sourcery-umd"
-          ariaLabel="Github"
-          icon={<FaGithub />}
-        />
-        <FooterIcon
-          link="https://www.instagram.com/umdopensourcery/"
-          ariaLabel="Instagram"
-          icon={<FaInstagram />}
-        />
-      </div>
-      <div className="mt-4 text-gray-400 mb-6">
-        Open Sourcery © {new Date().getFullYear()}
+    <footer className={`relative z-20 mt-24 ${className ?? ''}`}>
+      <div className="mx-auto max-w-7xl px-6 sm:px-12">
+        {/* A seam to close the page, matching the one under the hero */}
+        <div className="rule-gradient" />
+
+        <div className="flex flex-col items-center gap-5 py-12">
+          <span className="eyebrow">Get in touch</span>
+
+          <div className="flex justify-center gap-3">
+            <FooterIcon
+              link="mailto:umdopensourcery@gmail.com"
+              ariaLabel="Email"
+              fill={FILLS.email}
+              icon={<FaRegEnvelope />}
+            />
+            <FooterIcon
+              link="https://github.com/open-sourcery-umd"
+              ariaLabel="Github"
+              fill={FILLS.github}
+              icon={<FaGithub />}
+            />
+            <FooterIcon
+              link="https://www.instagram.com/umdopensourcery/"
+              ariaLabel="Instagram"
+              fill={FILLS.instagram}
+              icon={<FaInstagram />}
+            />
+          </div>
+
+          <p className="text-sm text-graphite-mute">
+            Open Sourcery &copy; {new Date().getFullYear()}
+          </p>
+        </div>
       </div>
     </footer>
   );

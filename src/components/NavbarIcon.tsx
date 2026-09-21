@@ -18,34 +18,37 @@ export default function NavbarIcon() {
   if (!firebaseUser) {
     // Not signed in - show user icon with dropdown for Sign Up and Log In
     return (
-      <div className="relative group">
+      // Hover lives on the wrapper so the pointer can travel from the icon to
+      // the menu without passing through dead space
+      <div
+        className="relative flex items-center"
+        onMouseEnter={() => setIsDropdownOpen(true)}
+        onMouseLeave={() => setIsDropdownOpen(false)}
+      >
         <button
-          onMouseEnter={() => setIsDropdownOpen(true)}
-          onMouseLeave={() => setIsDropdownOpen(false)}
           aria-label="Account options"
-          className="mt-1.5 hover:text-ycs-pink transition-colors"
+          aria-expanded={isDropdownOpen}
+          className="flex items-center text-graphite-soft hover:text-graphite transition-colors"
         >
-          <HiOutlineUser size={24} className="text-white" />
+          <HiOutlineUser size={22} />
         </button>
 
         {isDropdownOpen && (
-          <div
-            onMouseEnter={() => setIsDropdownOpen(true)}
-            onMouseLeave={() => setIsDropdownOpen(false)}
-            className="absolute right-0 mt-[-.5rem] w-40 bg-white rounded-lg shadow-lg z-50 py-2"
-          >
-            <Link
-              href="/sign-up"
-              className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition-colors"
-            >
-              Sign Up
-            </Link>
-            <Link
-              href="/log-in"
-              className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition-colors border-t border-gray-200"
-            >
-              Log In
-            </Link>
+          <div className="absolute right-0 top-full z-50 w-44 pt-3">
+            <div className="surface rounded-xl py-2 animate-rise">
+              <Link
+                href="/sign-up"
+                className="block px-4 py-2 text-sm text-graphite-soft hover:text-graphite hover:bg-azure/5 transition-colors"
+              >
+                Sign Up
+              </Link>
+              <Link
+                href="/log-in"
+                className="block px-4 py-2 text-sm text-graphite-soft hover:text-graphite hover:bg-azure/5 transition-colors"
+              >
+                Log In
+              </Link>
+            </div>
           </div>
         )}
       </div>
@@ -57,9 +60,9 @@ export default function NavbarIcon() {
     <button
       onClick={() => router.push("/settings")}
       aria-label="Settings"
-      className="mt-1.5 hover:text-ycs-pink transition-colors"
+      className="flex items-center text-graphite-soft hover:text-graphite transition-colors"
     >
-      <HiOutlineCog size={24} className="text-white" />
+      <HiOutlineCog size={22} />
     </button>
   );
 }

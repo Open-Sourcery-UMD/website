@@ -93,7 +93,7 @@ const ProjectProposalPage = () => {
         <h1 className='mt-20 text-2xl'>
           You're already on the {projectList} project{myProjects.length > 1 ? 's' : ''}!
         </h1>
-        <h2 className='mb-40 text-gray-300'>
+        <h2 className='mb-40 text-gray-500'>
           You can only be a Developer on one project at a time.
         </h2>
       </div>
