@@ -19,7 +19,7 @@ import {
   RepositoryMembership,
 } from "@/lib/githubApi";
 import { sendEmail } from "@/lib/emailService";
-import { leadCannotLeaveMessage } from "@/data";
+import { leadCannotDeleteMessage, leadCannotLeaveMessage } from "@/data";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 const ADMIN_EMAIL = "Open Sourcery <umdopensourcery@gmail.com>";
@@ -390,4 +390,62 @@ export async function withdrawProposal(uid: string, projectId: unknown): Promise
 export async function inviteSelfToOrganization(uid: string): Promise<void> {
   const profile = await getProfile(uid);
   await inviteUserToOrganization(requireGitHubUsername(profile), GITHUB_ORG);
+}
+
+/**
+ * Permanently deletes the caller's account.
+ *
+ * Membership lives on GitHub, so the account's repository access (and any
+ * unanswered invitation) is revoked first - otherwise the deleted account
+ * would keep holding a spot on its team. A proposal awaiting review is
+ * withdrawn, telling the board as a withdrawal does. Then the profile and the
+ * sign-in itself are deleted.
+ *
+ * Written to be safely retried: if a step fails partway, running it again
+ * finishes the job rather than tripping over what's already gone.
+ */
+export async function deleteAccount(uid: string): Promise<void> {
+  const db = adminDb();
+  const [profileSnapshot, ledSnapshot] = await Promise.all([
+    db.collection("users").doc(uid).get(),
+    db.collection("projects").where("pointOfContact", "==", uid).get(),
+  ]);
+  const profile = profileSnapshot.data() ?? {};
+  const led = ledSnapshot.docs.map((doc) => toProjectRecord(doc.id, doc.data()));
+
+  // A running project can't be left without a lead
+  const leading = led.find(
+    (project) => project.status !== "PROPOSED" && project.status !== "ARCHIVED"
+  );
+  if (leading) {
+    throw new HttpError(409, leadCannotDeleteMessage(leading.projectName));
+  }
+
+  const login = (profile.gitHubUsername || "").trim();
+  if (login) {
+    // Fresh from GitHub, and throws if any repository can't be checked, so
+    // an account is never deleted while it might still hold access somewhere
+    const { projects, membershipOf } = await getMembershipSnapshot();
+    const current = projects.filter((project) => hasMember(membershipOf(project), login));
+
+    await Promise.all(
+      current.map((project) =>
+        removeUserFromRepository(login, GITHUB_ORG, project.repositoryName)
+      )
+    );
+    await Promise.all(current.map(refreshTeamSize));
+  }
+
+  // Needs the profile for the board's email, so it runs before the delete
+  await Promise.all(
+    led
+      .filter((project) => project.status === "PROPOSED")
+      .map((project) => withdrawProposal(uid, project.id))
+  );
+
+  await Promise.all([
+    db.collection("users").doc(uid).delete(),
+    db.collection("joinLocks").doc(uid).delete(),
+  ]);
+  await adminAuth().deleteUser(uid);
 }

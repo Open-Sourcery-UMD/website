@@ -1,9 +1,16 @@
 "use client";
 
-import { db } from "@firebaseConfig";
+import { auth, db } from "@firebaseConfig";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
-import { sendEmailVerification, User as FirebaseUser } from "firebase/auth";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  sendEmailVerification,
+  signOut,
+  User as FirebaseUser,
+} from "firebase/auth";
 import { User } from "@/types/users";
+import { postAuthorized } from "./apiClient";
 
 /**
  * Creates a new user profile in Firestore
@@ -109,3 +116,40 @@ export async function resendVerificationEmail(firebaseUser: FirebaseUser): Promi
   }
 }
 
+/**
+ * Permanently deletes the signed-in user's account, after confirming their
+ * password.
+ *
+ * The password is checked with Firebase here; the server then accepts the
+ * request only because that check happened moments ago. It revokes their
+ * project access, then deletes the profile and the sign-in.
+ */
+export async function deleteAccount(firebaseUser: FirebaseUser, password: string): Promise<void> {
+  if (!firebaseUser.email) {
+    throw new Error("Your account has no email address to confirm with.");
+  }
+
+  try {
+    await reauthenticateWithCredential(
+      firebaseUser,
+      EmailAuthProvider.credential(firebaseUser.email, password)
+    );
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
+      throw new Error("That password isn't right.");
+    }
+    if (code === "auth/too-many-requests") {
+      throw new Error("Too many attempts. Please wait a few minutes and try again.");
+    }
+    console.error("Error confirming password:", error);
+    throw new Error("We couldn't confirm your password. Please try again.");
+  }
+
+  // A token issued after the confirmation, so the server sees it as recent
+  await firebaseUser.getIdToken(true);
+  await postAuthorized("/api/account", { action: "delete" });
+
+  // The account is gone on the server; drop the local session too
+  await signOut(auth);
+}

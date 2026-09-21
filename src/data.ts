@@ -142,6 +142,15 @@ export function leadCannotLeaveMessage(projectName: string): string {
   );
 }
 
+/** Why a lead can't delete their account while their project is running */
+export function leadCannotDeleteMessage(projectName: string): string {
+  return (
+    `You're the Lead Developer of "${projectName}", so you can't delete your account yet. ` +
+    `Transfer leadership to another member first: on the home page, open Edit Project ` +
+    `in your project's section.`
+  );
+}
+
 export const BOARD_MEMBERS = ['Om Arya', 'Shreyas Thirumale', 'Sifene Fufa', 'Lina Hsu', 'Diksha Pal', 'Colin Kurniawan'];
 
 interface TechnologyGroup {

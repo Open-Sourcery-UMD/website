@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@firebaseConfig";
 import { useAuth } from "@context/AuthContext";
-import { updateUserProfile, resendVerificationEmail } from "@lib/userService";
+import { deleteAccount, updateUserProfile, resendVerificationEmail } from "@lib/userService";
 import { getGitHubUser } from "@lib/githubService";
 import { leaveProject, withdrawProposal } from "@/lib/projectService";
 import { useUserProjects } from "@hooks/useUserProjects";
@@ -16,6 +16,7 @@ import {
 } from "@hooks/useUnsavedChangesWarning";
 import {
   getGraduationYearOptions,
+  leadCannotDeleteMessage,
   leadCannotLeaveMessage,
   Project,
   TECHNOLOGIES,
@@ -85,10 +86,18 @@ export default function SettingsPage() {
   const [resendingEmail, setResendingEmail] = useState(false);
   const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  // Set once the account is gone, so the signed-out redirect below doesn't
+  // send them to sign-up instead of home
+  const accountDeleted = useRef(false);
+
   // Initialize form from AuthContext (single source of truth)
   useEffect(() => {
     if (!loading && !firebaseUser) {
-      router.push("/sign-up");
+      if (!accountDeleted.current) router.push("/sign-up");
       return;
     }
 
@@ -321,6 +330,41 @@ export default function SettingsPage() {
     } catch (error) {
       console.error("Error signing out:", error);
       setErrorMessage("Failed to sign out. Please try again.");
+    }
+  };
+
+  const openDeleteDialog = () => {
+    // The server refuses too; this just avoids asking for a password first
+    const leading = myProjects.find(
+      (project) => project.pointOfContact === firebaseUser?.uid && project.status !== "ARCHIVED"
+    );
+    if (leading) {
+      window.alert(leadCannotDeleteMessage(leading.projectName));
+      return;
+    }
+
+    setDeletePassword("");
+    setDeleteError("");
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!firebaseUser || !deletePassword) return;
+
+    setDeleting(true);
+    setDeleteError("");
+
+    try {
+      accountDeleted.current = true;
+      await deleteAccount(firebaseUser, deletePassword);
+      router.push("/");
+    } catch (error) {
+      accountDeleted.current = false;
+      setDeleteError(
+        error instanceof Error ? error.message : "Failed to delete your account. Please try again."
+      );
+      setDeleting(false);
     }
   };
 
@@ -637,8 +681,78 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+
+        {/* Delete Account */}
+        <div className="surface rounded-2xl p-6 mb-8 border !border-red-200">
+          <h2 className="text-2xl font-semibold text-black mb-2">Delete Account</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Permanently delete your Open Sourcery account. This removes your profile and gems, and
+            your access to your project&apos;s GitHub repository. It can&apos;t be undone.
+          </p>
+          <button
+            onClick={openDeleteDialog}
+            className="px-6 py-2 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
+          >
+            Delete Account
+          </button>
+        </div>
       </div>
     </div>
+
+    {showDeleteDialog && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        onClick={() => !deleting && setShowDeleteDialog(false)}
+      >
+        <form
+          onSubmit={handleDeleteAccount}
+          onClick={(event) => event.stopPropagation()}
+          className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl"
+        >
+          <h3 className="text-xl font-semibold text-black mb-2">Delete your account?</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            This permanently deletes your profile and gems, and removes you from your
+            project&apos;s GitHub repository. Enter your password to confirm.
+          </p>
+
+          <label className="block text-sm font-medium text-black mb-1" htmlFor="delete-password">
+            Password
+          </label>
+          <input
+            id="delete-password"
+            type="password"
+            autoComplete="current-password"
+            autoFocus
+            value={deletePassword}
+            onChange={(event) => setDeletePassword(event.target.value)}
+            disabled={deleting}
+            className="w-full p-2 rounded-xl border-2 border-gray-300 text-black focus:border-red-400 outline-none mb-3"
+          />
+
+          {deleteError && (
+            <p className="mb-3 text-sm text-red-600">{deleteError}</p>
+          )}
+
+          <div className="flex justify-end gap-3 mt-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={deleting}
+              className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:opacity-90 disabled:opacity-50 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!deletePassword || deleting}
+              className="px-4 py-2 rounded-lg bg-red-500 text-white hover:opacity-90 disabled:opacity-50 font-medium"
+            >
+              {deleting ? "Deleting..." : "Delete my account"}
+            </button>
+          </div>
+        </form>
+      </div>
+    )}
     </VerificationGate>
   );
 }
