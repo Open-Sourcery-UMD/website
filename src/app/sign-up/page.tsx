@@ -1,7 +1,7 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth } from "@firebaseConfig";
 import { createUserProfile } from "@lib/userService";
@@ -33,7 +33,6 @@ const ALL_TECHNOLOGIES = TECHNOLOGIES.flatMap((g) => g.technologies);
 const ALL_TOPICS = TOPICS.flatMap((g) => g.topics);
 
 export default function SignUpPage() {
-  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -188,10 +187,9 @@ export default function SignUpPage() {
         console.error("Failed to send org invite:", err)
       );
 
+      // Stay on the confirmation so they can read the note about checking spam;
+      // they leave when they're ready
       setCurrentPage(3);
-      setTimeout(() => {
-        router.push("/");
-      }, 3000);
     } catch (error: any) {
       console.error("Sign-up error:", error);
       if (error.code === "auth/email-already-in-use") {
@@ -365,9 +363,12 @@ export default function SignUpPage() {
                   Please check your inbox and click the link to verify your account. If you cannot locate the email, please check your spam.
                 </p>
               </div>
-              <p className="text-sm text-gray-500">
-                You&apos;ll be redirected to the home page in a moment.
-              </p>
+              <Link
+                href="/"
+                className="y2k-button inline-flex px-8 py-3 font-semibold text-white"
+              >
+                Go to the home page
+              </Link>
             </div>
           </div>
         )}
