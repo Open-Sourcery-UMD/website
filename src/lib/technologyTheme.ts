@@ -55,7 +55,7 @@ const TECHNOLOGY_COLORS: Record<string, string> = {
 };
 
 /** Used when a project lists nothing, or something not in the map */
-export const DEFAULT_TECHNOLOGY_COLOR = '#90c8ff';
+const DEFAULT_TECHNOLOGY_COLOR = '#90c8ff';
 
 // Text sits on a pale card, so colours above this relative luminance are
 // mixed toward black until they're dark enough to read
@@ -83,7 +83,7 @@ function rgbToHex(r: number, g: number, b: number): string {
 }
 
 /** WCAG relative luminance, 0 (black) to 1 (white) */
-export function relativeLuminance(hex: string): number {
+function relativeLuminance(hex: string): number {
   const [r, g, b] = hexToRgb(hex).map((channel) => {
     const proportion = channel / 255;
     return proportion <= 0.03928
@@ -98,11 +98,14 @@ export function relativeLuminance(hex: string): number {
  * How high up the TECHNOLOGIES sections a technology sits. Lower wins, so a
  * project's language beats its tooling. Anything unrecognised sorts last.
  */
+const SECTION_RANK = new Map(
+  TECHNOLOGIES.flatMap((group, index) =>
+    group.technologies.map((technology) => [technology, index] as const)
+  )
+);
+
 function getSectionRank(technology: string): number {
-  const index = TECHNOLOGIES.findIndex((group) =>
-    group.technologies.includes(technology)
-  );
-  return index === -1 ? TECHNOLOGIES.length : index;
+  return SECTION_RANK.get(technology) ?? TECHNOLOGIES.length;
 }
 
 /**
@@ -113,7 +116,7 @@ function getSectionRank(technology: string): number {
  * required technology beats a merely used one, and ties go to whichever the
  * project listed first.
  */
-export function getPrimaryTechnology(project: Project): string | null {
+function getPrimaryTechnology(project: Project): string | null {
   const required = project.technologiesRequired ?? [];
   const used = project.technologiesUsed ?? [];
 
@@ -140,7 +143,7 @@ export function getPrimaryTechnology(project: Project): string | null {
  * The brand colour for a technology, for accents where legibility as text
  * doesn't matter (borders, strips, background washes)
  */
-export function getTechnologyColor(technology: string | null): string {
+function getTechnologyColor(technology: string | null): string {
   if (!technology) return DEFAULT_TECHNOLOGY_COLOR;
   return TECHNOLOGY_COLORS[technology] ?? DEFAULT_TECHNOLOGY_COLOR;
 }
@@ -149,7 +152,7 @@ export function getTechnologyColor(technology: string | null): string {
  * The same colour, darkened if needed until it reads clearly as text on a
  * pale background. Keeps the hue, so it still looks like the brand.
  */
-export function getReadableColor(color: string): string {
+function getReadableColor(color: string): string {
   let [r, g, b] = hexToRgb(color);
   let hex = rgbToHex(r, g, b);
 

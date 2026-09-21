@@ -5,6 +5,15 @@
  */
 
 import { authorizedFetch, postAuthorized } from './apiClient';
+// Type-only: response shapes are declared once, beside the server code that
+// builds them, and nothing from that module reaches the browser bundle
+import type {
+  ActivityItem,
+  ProjectOverview,
+  RepositoryMembership,
+} from './githubApi';
+
+export type { ActivityItem, ProjectOverview, RepositoryMembership };
 
 /**
  * Validates if a GitHub username exists
@@ -45,42 +54,7 @@ export async function getOrganizationRepositories(): Promise<string[]> {
   }
 }
 
-/**
- * Gets effective repository user count (active users + pending invites)
- */
-export async function getEffectiveRepoUserCount(repo: string): Promise<{
-  activeUsers: number;
-  pendingInvites: number;
-  totalEffective: number;
-}> {
-  try {
-    const params = new URLSearchParams({
-      action: "repoCapacity",
-      repo,
-    });
-
-    const response = await fetch(`/api/github?${params}`);
-    if (!response.ok) {
-      return { activeUsers: 0, pendingInvites: 0, totalEffective: 0 };
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`Error fetching repo capacity for ${repo}:`, error);
-    return { activeUsers: 0, pendingInvites: 0, totalEffective: 0 };
-  }
-}
-
-/**
- * Who is on a project, according to its repository: direct collaborators plus
- * anyone with a pending invitation. See getRepositoryMembership in githubApi.
- */
-export interface RepositoryMembership {
-  collaborators: string[];
-  pendingInvitees: string[];
-}
-
-export interface RepositoryMembershipMap {
+interface RepositoryMembershipMap {
   membership: Record<string, RepositoryMembership>;
   /** Repositories whose membership couldn't be determined */
   failed: string[];
@@ -116,95 +90,6 @@ export async function getRepositoryMembershipMap(
     // than empty, so callers never mistake an outage for "not a member"
     return { membership: {}, failed: uniqueRepos };
   }
-}
-
-/**
- * Gets user's activity in a repository since a date
- */
-export async function getUserRepositoryActivity(
-  username: string,
-  repo: string,
-  since: Date
-): Promise<{ issues: number; mergedPRs: number }> {
-  try {
-    const params = new URLSearchParams({
-      action: "activity",
-      username,
-      repo,
-      since: since.toISOString(),
-    });
-    const response = await fetch(`/api/github?${params}`);
-    if (!response.ok) return { issues: 0, mergedPRs: 0 };
-    return await response.json();
-  } catch (error) {
-    console.error(
-      `Error fetching activity for ${username} in ${repo}:`,
-      error
-    );
-    return { issues: 0, mergedPRs: 0 };
-  }
-}
-
-/**
- * Gets merged PRs by user in public repos other than the specified ones since a date
- */
-export async function getMergedPRsInOtherRepos(
-  username: string,
-  excludeRepos: string[],
-  since: Date
-): Promise<{ repo: string; mergedAt: string }[]> {
-  try {
-    const params = new URLSearchParams({
-      action: "otherPRs",
-      username,
-      excludeRepos: excludeRepos.filter(Boolean).join(","),
-      since: since.toISOString(),
-    });
-    const response = await fetch(`/api/github?${params}`);
-    if (!response.ok) return [];
-    return await response.json();
-  } catch (error) {
-    console.error(`Error fetching other-repo PRs for ${username}:`, error);
-    return [];
-  }
-}
-
-export interface RepositorySummary {
-  name: string;
-  fullName: string;
-  url: string;
-  description: string | null;
-  stars: number;
-  forks: number;
-  language: string | null;
-  pushedAt: string | null;
-}
-
-export interface CommitSummary {
-  sha: string;
-  message: string;
-  authorName: string;
-  authorLogin: string | null;
-  date: string;
-  url: string;
-}
-
-export interface ActivityItem {
-  number: number;
-  title: string;
-  url: string;
-  authorLogin: string;
-  state: "open" | "closed";
-  merged: boolean;
-  createdAt: string;
-  closedAt: string | null;
-}
-
-export interface ProjectOverview {
-  repository: RepositorySummary | null;
-  commits: CommitSummary[];
-  pullRequests: ActivityItem[];
-  issues: ActivityItem[];
 }
 
 const EMPTY_OVERVIEW: ProjectOverview = {

@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Profiles hold private details - email, attendance, graduation year - so
+    // each is readable and writable only by its owner. Anything shown to
+    // other people (leads, rosters, the leaderboard) is served by the site's
+    // server, which bypasses these rules and returns only what each view
+    // needs. Password hashes are never stored: Firebase Auth owns credentials.
+    match /users/{uid} {
+      allow read, update, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && !('hashedPassword' in request.resource.data);
+    }
+
+    // Projects are public so anyone can browse them.
+    match /projects/{projectId} {
+      allow read: if true;
+
+      // Proposing a project: signed in, as yourself, awaiting review
+      allow create: if signedIn()
+        && request.resource.data.pointOfContact == request.auth.uid
+        && request.resource.data.status == 'PROPOSED';
+
+      // The lead may edit the technologies and year range, or hand over the
+      // lead. Everything else - status, team size - is the server's to change.
+      allow update: if signedIn()
+        && resource.data.pointOfContact == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['technologiesRequired', 'technologiesUsed', 'yearRange', 'pointOfContact']);
+
+      // Withdrawing a proposal goes through the server
+      allow delete: if false;
+    }
+
+    // Everything else (e.g. the server's joinLocks) is server-only
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

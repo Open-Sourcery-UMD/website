@@ -1,4 +1,3 @@
-@import 'prism-themes/themes/prism-dracula.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -15,8 +14,6 @@
 
   --spell: #90c8ff;
   --azure: #0071bc;
-  --azure-deep: #005a96;
-  --ember: #f45a5a;
 
   --text-primary: #08080d;
   --text-secondary: #16161f;
@@ -127,17 +124,35 @@
     backdrop-filter: blur(14px);
   }
 
-  .surface-hover {
-    transition:
-      transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.4s ease,
-      box-shadow 0.4s ease;
+  /*
+   * The fixed background layer. inset: 0 would size it to the viewport with
+   * mobile toolbars showing, leaving a bare strip at the bottom once they
+   * collapse on scroll; the largest viewport height covers both states.
+   */
+  .site-canvas {
+    height: 100vh;
+    height: 100lvh;
   }
 
-  .surface-hover:hover {
-    transform: translateY(-4px);
-    background: rgba(255, 255, 255, 0.86);
-    box-shadow: 0 26px 50px -22px rgba(31, 32, 51, 0.3);
+  /* A soft halo in the card's own colour (--glow) on hover. It lives on a
+     pseudo-element so it doesn't fight ring utilities, which also use
+     box-shadow, and fades by opacity alone. */
+  .card-glow::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      0 0 0 1px var(--glow-edge, rgba(88, 176, 239, 0.35)),
+      0 0 28px -4px var(--glow, rgba(88, 176, 239, 0.4));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .card-glow:hover::after,
+  .card-glow:focus-within::after {
+    opacity: 1;
   }
 
   .text-spell-gradient {
@@ -174,10 +189,8 @@
     border-radius: 9999px;
     background-image: linear-gradient(
       180deg,
-      var(--btn, #9ed2ff) 0%,
-      var(--btn-deep, #58b0ef) 100%
+      var(--btn-deep, #169bcb) 100%
     );
-    border: 1px solid rgba(255, 255, 255, 0.5);
     /* A single hairline of light along the top edge is all the gloss it needs */
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.55),
@@ -235,13 +248,42 @@
     background-color: var(--chip);
   }
 
-  .cta-button {
-    background-color: var(--btn);
-    transition: background-color 0.3s ease;
+  /* A holographic rim along a card's top edge, shimmering slowly */
+  .holo-rim::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, #98f0ff, #b9a4ff, #ffb3de, #98f0ff);
+    background-size: 240% 100%;
+    animation: holo-shift 9s linear infinite;
   }
 
-  .cta-button:hover {
-    background-color: var(--btn-hover);
+  /*
+   * A glossy metal disc. The metal arrives as --metal (a radial gradient) and
+   * --glow; the ::after is the curved highlight that makes it read as a bead
+   * of chrome rather than a flat circle.
+   */
+  .medal {
+    position: relative;
+    border-radius: 9999px;
+    background: var(--metal);
+    box-shadow:
+      inset 0 -3px 6px rgba(0, 0, 0, 0.18),
+      inset 0 2px 2px rgba(255, 255, 255, 0.8),
+      0 6px 18px -4px var(--glow);
+  }
+
+  .medal::after {
+    content: '';
+    position: absolute;
+    top: 7%;
+    left: 18%;
+    width: 64%;
+    height: 42%;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0));
+    pointer-events: none;
   }
 
   /* A thin gradient seam used to close out sections */
@@ -269,10 +311,6 @@
   }
 }
 
-.prose img {
-  margin-left: auto;
-  margin-right: auto;
-}
 
 .nav-link {
   position: relative;
@@ -347,23 +385,28 @@
   animation-delay: var(--delay);
 }
 
+/* Sparkles that pulse in place, for things that should glint, not fall */
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.6) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+.animate-twinkle {
+  animation: twinkle var(--duration, 2.4s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
 @keyframes holo-shift {
   to {
     background-position: 240% 0;
   }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 3s forwards;
 }
 
 /* Nothing here is load-bearing, so drop it all when motion isn't wanted */

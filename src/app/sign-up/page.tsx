@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth } from "@firebaseConfig";
-import { createUserProfile, hashPassword } from "@lib/userService";
+import { createUserProfile } from "@lib/userService";
 import { getGitHubUser, inviteUserToOrganization } from "@lib/githubService";
 import { TECHNOLOGIES, TOPICS, getGraduationYearOptions } from "@data";
 import FormHeader from "@components/forms/FormHeader";
@@ -150,9 +150,9 @@ export default function SignUpPage() {
     setErrorMessage("");
 
     try {
-      const hashedPassword = await hashPassword(formData.password);
-
-      const userData: User & { hashedPassword: string } = {
+      // No password is stored here: Firebase Auth owns credentials, and a copy
+      // of the hash in the profile only created something to leak
+      const userData: User = {
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -163,7 +163,6 @@ export default function SignUpPage() {
         preferredTopics: formData.preferredTopics,
         eventsAttended: [],
         lastWarningTime: new Date(),
-        hashedPassword,
       };
 
       const userCredential = await createUserWithEmailAndPassword(

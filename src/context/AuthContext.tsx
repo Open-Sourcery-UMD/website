@@ -17,7 +17,6 @@ type AuthContextType = {
   firestoreUser: User | null;
   setFirestoreUser: React.Dispatch<React.SetStateAction<User | null>>;
   loading: boolean;
-  error: string | null;
   emailVerified: boolean;
 };
 
@@ -26,7 +25,6 @@ const AuthContext = createContext<AuthContextType>({
   firestoreUser: null,
   setFirestoreUser: () => {},
   loading: true,
-  error: null,
   emailVerified: false,
 });
 
@@ -34,7 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [firestoreUser, setFirestoreUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState(false);
 
   useEffect(() => {
@@ -54,16 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!isMounted) return;
 
           setFirestoreUser(userProfile);
-          setError(null);
         } else {
           setFirestoreUser(null);
           setEmailVerified(false);
         }
       } catch (err) {
         console.error("Auth error:", err);
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Unknown error");
-        }
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -101,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firestoreUser,
         setFirestoreUser,
         loading,
-        error,
         emailVerified,
       }}
     >

@@ -25,11 +25,3 @@ export const SectionContainer = ({
     {children}
   </section>
 );
-
-export const Container = ({
-  children,
-  className = '',
-}: {
-  children: ReactNode;
-  className?: string;
-}) => <div className={`max-w-7xl mx-auto ${className}`}>{children}</div>;

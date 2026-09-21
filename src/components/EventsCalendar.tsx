@@ -43,9 +43,6 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
 
   let tag = "MISC";
   let imageSrc = "/open_sourcery.png";
-  // Most events have no photo and fall back to the club mark. Blown up to
-  // fill a cover area it fights the text, so those get a crest plate instead.
-
 
   // Main events
   if (lowerSummary.includes("hack session")) {
@@ -101,9 +98,7 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
               aria-hidden
               width={220}
               height={220}
-              // Held inside the frame: a bleeding watermark escaped the card's
-              // rounded corner, since blend modes don't always clip to it
-              className={`absolute right-4 top-4 w-24 opacity-[0.25] mix-blend-multiply transition-transform duration-700 ${
+              className={`absolute right-4 top-4 w-24 opacity-[0.7] mix-blend-multiply transition-transform duration-700 ${
                 isHovered ? 'scale-105 -rotate-3' : 'scale-100'
               }`}
             />
@@ -131,7 +126,7 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
             </div>
 
             {/* Summary */}
-            <h3 className="text-graphite text-xl font-semibold tracking-tight">
+            <h3 className="text-black text-xl font-semibold tracking-tight">
               {event.summary}
             </h3>
 
@@ -149,7 +144,7 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
 
             {/* Description */}
             {event.description && (
-              <p className="text-graphite-mute text-sm mt-3 line-clamp-2">
+              <p className="text-black text-sm mt-3 line-clamp-2">
                 {event.description}
               </p>
             )}

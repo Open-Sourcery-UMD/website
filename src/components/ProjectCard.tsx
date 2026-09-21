@@ -14,6 +14,8 @@ const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
  * - proposal:    has a proposal awaiting review, which blocks joining
  * - checking:    membership still loading
  * - unavailable: membership couldn't be verified, so joining is blocked
+ * - signed-out:  a visitor browsing without an account
+ * - unverified:  signed in, but joining needs a verified email
  */
 export type CardMembership =
   | 'none'
@@ -21,26 +23,33 @@ export type CardMembership =
   | 'other'
   | 'proposal'
   | 'checking'
-  | 'unavailable';
+  | 'unavailable'
+  | 'signed-out'
+  | 'unverified';
 
 interface ProjectCardProps {
   project: Project;
   /** The project's lead developer, once looked up */
   lead?: ProjectLead;
   onJoin?: (project: Project) => void;
+  /** Offered in place of Join on the viewer's own project */
+  onLeave?: (project: Project) => void;
   membership?: CardMembership;
   /** Disables the button without changing its label, e.g. while another join runs */
   joinLocked?: boolean;
   joining?: boolean;
+  leaving?: boolean;
 }
 
 export const ProjectCard = ({
   project,
   lead,
   onJoin,
+  onLeave,
   membership = 'none',
   joinLocked = false,
   joining,
+  leaving = false,
 }: ProjectCardProps) => {
   const { data } = useTeamMatching();
 
@@ -52,6 +61,10 @@ export const ProjectCard = ({
   const hasGraduationYear = standing !== null;
   const isYearMatch =
     hasGraduationYear && standing >= minYear && standing <= maxYear;
+
+  // A visitor has no profile to compare against, so the fit markers go
+  // neutral rather than marking every requirement as unmet
+  const showFit = membership !== 'signed-out';
 
   const spotsRemaining = project.maxTeamSize - project.currentTeamSize;
   const isMember = membership === 'this';
@@ -89,20 +102,27 @@ export const ProjectCard = ({
             ? 'Checking...'
             : membership === 'unavailable'
               ? 'Unavailable'
-              : spotsRemaining <= 0
+              : membership === 'signed-out'
+                ? 'Sign in to join'
+                : membership === 'unverified'
+                  ? 'Verify your email to join'
+                  : spotsRemaining <= 0
                 ? 'Full'
                 : !hasGraduationYear
                   ? 'Set your graduation year'
                   : !isYearMatch
                     ? 'Out of year range'
-                    : 'Join';
+                    : `Join '${project.projectName}'`;
 
   return (
     <div
       className={`relative ${spotsRemaining <= 0 && !isMember ? 'opacity-60' : ''} surface ${
         isMember ? 'ring-2 ring-azure/60' : ''
-      } rounded-3xl p-6 flex flex-col`}
+      } card-glow rounded-3xl p-6 flex flex-col`}
       style={{
+        // Hover glow in the theme colour; 73 and 59 are ~45% and ~35% alpha
+        ['--glow' as string]: `${theme.accent}73`,
+        ['--glow-edge' as string]: `${theme.accent}59`,
         // The pink border marks the viewer's own project, so the theme gives
         // way to it there; 59 and 14 are ~35% and ~8% alpha
         ...(isMember
@@ -169,9 +189,13 @@ export const ProjectCard = ({
               const has = data.technologies.includes(tech);
               return (
                 <div key={tech} className="flex items-center gap-2 text-graphite">
-                  <span className={has ? 'text-green-400' : 'text-red-400'}>
-                    {has ? '✔' : '✖'}
-                  </span>
+                  {showFit ? (
+                    <span className={has ? 'text-green-400' : 'text-red-400'}>
+                      {has ? '✔' : '✖'}
+                    </span>
+                  ) : (
+                    <span className="text-graphite-mute">&bull;</span>
+                  )}
                   {tech}
                 </div>
               );
@@ -197,13 +221,14 @@ export const ProjectCard = ({
       {/* Topics */}
       <div className="flex flex-wrap gap-2 mb-4">
         {project.topics.map((topic) => {
-          const preferred = data.topics.includes(topic);
+          // Like the fit markers, a visitor has no interests to highlight
+          const preferred = showFit && data.topics.includes(topic);
           return (
             <span
               key={topic}
               className={`px-3 py-1 rounded-full text-sm ${
                 preferred
-                  ? 'y2k-button text-graphite'
+                  ? 'y2k-button text-white'
                   : 'bg-graphite/[0.06] text-graphite'
               }`}
             >
@@ -215,9 +240,11 @@ export const ProjectCard = ({
 
       {/* Year Range */}
       <div className="flex items-center gap-2 text-graphite mb-2">
-        <span className={isYearMatch ? 'text-green-400' : 'text-red-400'}>
-          {isYearMatch ? '✔' : '✖'}
-        </span>
+        {showFit && (
+          <span className={isYearMatch ? 'text-green-400' : 'text-red-400'}>
+            {isYearMatch ? '✔' : '✖'}
+          </span>
+        )}
         Year Range:
         <span className="font-medium">
          {formatYearRange(minYear, maxYear)}
@@ -286,18 +313,29 @@ export const ProjectCard = ({
         </div>
       )}
 
-      {/* Join Button */}
+      {/* On your own project: a quiet way out rather than a dead button */}
+      {isMember ? (
+        <button
+          disabled={leaving || joinLocked}
+          onClick={() => onLeave?.(project)}
+          className="mt-auto w-full border border-red-200 bg-red-50/80 py-3 font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {leaving ? 'Leaving...' : 'Leave this project'}
+        </button>
+      ) : (
+      /* Join Button */
       <button
         disabled={isFullOrDisabled || joining}
         onClick={() => onJoin?.(project)}
         className={`mt-auto w-full py-3 rounded font-semibold transition ${
           !isFullOrDisabled && !joining
-            ? 'y2k-button text-graphite hover:opacity-90 cursor-pointer'
+            ? 'y2k-button text-white hover:opacity-90 cursor-pointer'
             : 'bg-graphite/[0.07] text-graphite-mute cursor-not-allowed'
         }`}
       >
         {buttonLabel}
       </button>
+      )}
     </div>
   );
 };

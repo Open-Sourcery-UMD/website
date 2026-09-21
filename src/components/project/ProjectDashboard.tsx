@@ -16,9 +16,7 @@ import { SectionContainer } from '@components/Container';
 import {
   getProjectById,
   getProjectTeamMembers,
-  getRepositoryMembers,
   ProjectTeamMember,
-  RepositoryMembership,
 } from '@/lib/projectService';
 import {
   ActivityItem,
@@ -273,15 +271,12 @@ const CommitsCard = ({ overview }: { overview: ProjectOverview }) => (
 
 interface ProjectSectionProps {
   initialProject: Project;
-  /** Already-loaded membership for this project's repository */
-  repositoryMembers?: RepositoryMembership;
   /** The viewer's own invitation hasn't been accepted yet */
   viewerPending: boolean;
 }
 
 const ProjectSection = ({
   initialProject,
-  repositoryMembers,
   viewerPending,
 }: ProjectSectionProps) => {
   const { firebaseUser } = useAuth();
@@ -298,7 +293,7 @@ const ProjectSection = ({
       try {
         // The roster and the GitHub data are independent, so fetch in parallel
         const [fetchedMembers, fetchedOverview] = await Promise.all([
-          getProjectTeamMembers(current, repositoryMembers),
+          getProjectTeamMembers(current),
           getProjectOverview(current.repositoryName),
         ]);
 
@@ -310,7 +305,7 @@ const ProjectSection = ({
         setLoading(false);
       }
     },
-    [repositoryMembers]
+    []
   );
 
   useEffect(() => {
@@ -319,13 +314,17 @@ const ProjectSection = ({
   }, [initialProject, loadDetails]);
 
   // Edits and leadership transfers change the project document, and the
-  // roster's Lead badge is derived from it, so re-read both
+  // roster's Lead badge is derived from it, so re-read both - together, and
+  // without the GitHub overview, which neither can change
   const handleSaved = async () => {
-    const updated = await getProjectById(project.id);
+    const [updated, updatedMembers] = await Promise.all([
+      getProjectById(project.id),
+      getProjectTeamMembers(project),
+    ]);
     if (!updated) return;
 
     setProject(updated);
-    await loadDetails(updated);
+    setMembers(updatedMembers);
   };
 
   const isLead =
@@ -466,7 +465,7 @@ const ProjectSection = ({
  * someone on several projects, and each gets its own section.
  */
 const ProjectDashboard = () => {
-  const { projects, pendingProjectIds, membership, loading } = useUserProjects();
+  const { projects, pendingProjectIds, loading } = useUserProjects();
 
   if (loading || projects.length === 0) return null;
 
@@ -476,9 +475,6 @@ const ProjectDashboard = () => {
         <SectionContainer key={project.id}>
           <ProjectSection
             initialProject={project}
-            repositoryMembers={
-              membership ? getRepositoryMembers(membership, project) : undefined
-            }
             viewerPending={pendingProjectIds.has(project.id)}
           />
         </SectionContainer>

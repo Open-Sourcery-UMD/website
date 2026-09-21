@@ -52,7 +52,7 @@ export const GradientBox: FC<Props> = ({ title, text, color, link, label, icon }
         {link && label && (
           <Link
             href={link}
-            className="y2k-button flex cursor-pointer justify-center self-center px-9 py-3 text-center font-semibold text-graphite"
+            className="y2k-button flex cursor-pointer justify-center self-center px-9 py-3 text-center font-semibold text-white"
           >
             {label}
           </Link>

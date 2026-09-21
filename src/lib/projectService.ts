@@ -15,14 +15,26 @@ import {
 } from 'firebase/firestore';
 import { Project } from '@/data';
 import {
-  getEffectiveRepoUserCount,
   getOrganizationRepositories,
   getRepositoryMembershipMap,
   RepositoryMembership,
 } from './githubService';
-import { postAuthorized } from './apiClient';
+import { authorizedFetch, postAuthorized } from './apiClient';
+// Type-only, so none of the server code reaches the browser bundle
+import type { LeadProfile, TeamMember } from './server/profiles';
+
+export type ProjectLead = LeadProfile;
+export type ProjectTeamMember = TeamMember;
 
 const PROJECTS_COLLECTION = 'projects';
+
+function toProject(id: string, data: DocumentData): Project {
+  return {
+    ...data,
+    id,
+    createdAt: data.createdAt?.toDate?.() || new Date(),
+  } as Project;
+}
 
 /**
  * Converts a project name to a valid GitHub repository name
@@ -79,66 +91,44 @@ export async function createProjectProposal(
 }
 
 /**
- * Fetches all projects from Firestore and validates they exist as GitHub repos
- * Updates currentTeamSize from GitHub if repo exists
- * ARCHIVED projects are excluded - this is the Team Matching Portal's list
+ * Every project on the Our Projects page: not archived, and backed by a
+ * repository in the GitHub org. Team sizes are live from GitHub, falling back
+ * to the stored count for any repository GitHub couldn't answer for.
  */
 export async function getFirestoreProjects(): Promise<Project[]> {
-  try {
-    const projectsRef = collection(db, PROJECTS_COLLECTION);
-    const snapshot = await getDocs(projectsRef);
+  const [snapshot, orgRepos] = await Promise.all([
+    getDocs(collection(db, PROJECTS_COLLECTION)),
+    // Already returns [] on failure, and then every project is shown
+    getOrganizationRepositories(),
+  ]);
 
-    // Get list of valid GitHub repositories
-    let validRepos: string[] = [];
-    try {
-      validRepos = await getOrganizationRepositories();
-    } catch (error) {
-      console.error('Error fetching GitHub repos, using all Firestore projects:', error);
-      // Continue without GitHub validation if API fails
+  // The org list is lowercased; repository names are case-insensitive
+  const validRepos = new Set(orgRepos);
+
+  const projects = snapshot.docs
+    .map((docSnap) => toProject(docSnap.id, docSnap.data()))
+    .filter((project) => {
+      if (project.status === 'ARCHIVED') return false;
+      if (validRepos.size === 0 || validRepos.has((project.repositoryName || '').toLowerCase())) {
+        return true;
+      }
+      console.warn(`Project ${project.projectName} has no matching GitHub repo: ${project.repositoryName}`);
+      return false;
+    });
+
+  // Every team size in one request, rather than one round trip per project
+  const { membership } = await getRepositoryMembershipMap(
+    projects.map((project) => project.repositoryName)
+  );
+
+  for (const project of projects) {
+    const members = membership[project.repositoryName];
+    if (members) {
+      project.currentTeamSize = members.collaborators.length + members.pendingInvitees.length;
     }
-
-    const projects: Project[] = [];
-
-    for (const docSnap of snapshot.docs) {
-      const projectData = docSnap.data();
-      const repositoryName = projectData.repositoryName || '';
-
-      // Skip archived projects before hitting the GitHub API for them
-      if (projectData.status === 'ARCHIVED') {
-        continue;
-      }
-
-      // Skip projects if their repository doesn't exist in GitHub org
-      if (validRepos.length > 0 && !validRepos.includes(repositoryName)) {
-        console.warn(`Project ${projectData.projectName} has no matching GitHub repo: ${repositoryName}`);
-        continue;
-      }
-
-      try {
-        // Update currentTeamSize from GitHub
-        const stats = await getEffectiveRepoUserCount(repositoryName);
-        projects.push({
-          ...projectData,
-          id: docSnap.id,
-          createdAt: projectData.createdAt?.toDate?.() || new Date(),
-          currentTeamSize: stats.totalEffective,
-        } as Project);
-      } catch (error) {
-        console.error(`Error updating team size for ${projectData.projectName}:`, error);
-        // Include project with Firestore team size if GitHub update fails
-        projects.push({
-          ...projectData,
-          id: docSnap.id,
-          createdAt: projectData.createdAt?.toDate?.() || new Date(),
-        } as Project);
-      }
-    }
-
-    return projects.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  } catch (error) {
-    console.error('Error fetching Firestore projects:', error);
-    throw error;
   }
+
+  return projects.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 /**
@@ -154,12 +144,7 @@ export async function getProjectById(projectId: string): Promise<Project | null>
       return null;
     }
 
-    const projectData = docSnap.data();
-    return {
-      ...projectData,
-      id: docSnap.id,
-      createdAt: projectData.createdAt?.toDate?.() || new Date(),
-    } as Project;
+    return toProject(docSnap.id, docSnap.data());
   } catch (error) {
     console.error('Error fetching project:', error);
     throw error;
@@ -172,20 +157,10 @@ export async function getProjectById(projectId: string): Promise<Project | null>
  * No GitHub validation or team-size refresh, so it's cheap enough to use as
  * the basis for membership lookups.
  */
-export async function getAllProjects(): Promise<Project[]> {
+async function getAllProjects(): Promise<Project[]> {
   const snapshot = await getDocs(collection(db, PROJECTS_COLLECTION));
-
-  return snapshot.docs.map((docSnap) => {
-    const projectData = docSnap.data();
-    return {
-      ...projectData,
-      id: docSnap.id,
-      createdAt: projectData.createdAt?.toDate?.() || new Date(),
-    } as Project;
-  });
+  return snapshot.docs.map((docSnap) => toProject(docSnap.id, docSnap.data()));
 }
-
-export type { RepositoryMembership };
 
 /**
  * A snapshot of who is on which project.
@@ -195,7 +170,7 @@ export type { RepositoryMembership };
  * for) the project's repository. Everything that asks "which project is this
  * person on?" goes through a snapshot like this one.
  */
-export interface ProjectMembership {
+interface ProjectMembership {
   projects: Project[];
   membership: Record<string, RepositoryMembership>;
   /** Repositories whose membership couldn't be read from GitHub */
@@ -259,59 +234,24 @@ export function getProjectsForUser(
   });
 }
 
-export interface ProjectLead {
-  uid: string;
-  name: string;
-  email: string;
-  gitHubUsername: string;
-  discordUsername: string;
-}
-
 /**
  * Fetches the lead developer (point of contact) of each project, keyed by
  * project id.
  *
- * Several projects can share a lead, so each account is read once.
+ * Profiles are owner-only in Firestore, so this comes from the server, which
+ * returns just the contact fields. Public, so no session is needed.
  */
-export async function getProjectLeads(
-  projects: Project[]
-): Promise<Map<string, ProjectLead>> {
-  const leadUids = Array.from(
-    new Set(projects.map((project) => project.pointOfContact).filter(Boolean))
-  );
+export async function getProjectLeads(): Promise<Map<string, ProjectLead>> {
+  try {
+    const response = await fetch('/api/profiles?action=leads');
+    if (!response.ok) return new Map();
 
-  const leadsByUid = new Map<string, ProjectLead>();
-
-  await Promise.all(
-    leadUids.map(async (uid) => {
-      try {
-        const snapshot = await getDoc(doc(collection(db, 'users'), uid));
-        if (!snapshot.exists()) return;
-
-        const data = snapshot.data();
-        const name = [data.firstName, data.lastName].filter(Boolean).join(' ');
-        if (!name) return;
-
-        leadsByUid.set(uid, {
-          uid,
-          name,
-          email: data.email || '',
-          gitHubUsername: data.gitHubUsername || '',
-          discordUsername: data.discordUsername || '',
-        });
-      } catch (error) {
-        console.error(`Error fetching lead developer ${uid}:`, error);
-      }
-    })
-  );
-
-  const leadsByProject = new Map<string, ProjectLead>();
-  for (const project of projects) {
-    const lead = project.pointOfContact && leadsByUid.get(project.pointOfContact);
-    if (lead) leadsByProject.set(project.id, lead);
+    const leads: Record<string, ProjectLead> = await response.json();
+    return new Map(Object.entries(leads));
+  } catch (error) {
+    console.error('Error fetching project leads:', error);
+    return new Map();
   }
-
-  return leadsByProject;
 }
 
 /**
@@ -331,14 +271,7 @@ export async function getPendingProposals(uid: string): Promise<Project[]> {
   );
 
   return snapshot.docs
-    .map((docSnap) => {
-      const projectData = docSnap.data();
-      return {
-        ...projectData,
-        id: docSnap.id,
-        createdAt: projectData.createdAt?.toDate?.() || new Date(),
-      } as Project;
-    })
+    .map((docSnap) => toProject(docSnap.id, docSnap.data()))
     .filter((project) => project.status === 'PROPOSED');
 }
 
@@ -367,130 +300,22 @@ export async function withdrawProposal(projectId: string): Promise<void> {
   await postAuthorized('/api/projects', { action: 'withdrawProposal', projectId });
 }
 
-export interface ProjectTeamMember {
-  uid: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  discordUsername: string;
-  gitHubUsername: string;
-  isLead: boolean;
-  /** Invited to the repository but hasn't accepted yet */
-  pending: boolean;
-  /** Has repository access but no Open Sourcery account */
-  gitHubOnly: boolean;
-}
-
 /**
- * Looks up the Open Sourcery accounts behind a set of GitHub logins.
+ * Fetches everyone on a project: lead first, then active members, then anyone
+ * whose invitation is still pending.
  *
- * gitHubUsername is stored exactly as the user typed it, while GitHub reports
- * canonical casing. Exact matches are tried first since they're cheap; a
- * case-insensitive scan of all users covers whatever is left over.
- */
-async function getUsersByGitHubLogin(
-  logins: string[]
-): Promise<Map<string, { uid: string; data: DocumentData }>> {
-  const found = new Map<string, { uid: string; data: DocumentData }>();
-  const wanted = new Set(logins.map(normalizeLogin));
-  const usersRef = collection(db, 'users');
-
-  const record = (uid: string, data: DocumentData) => {
-    const login = normalizeLogin(data.gitHubUsername || '');
-    if (wanted.has(login) && !found.has(login)) {
-      found.set(login, { uid, data });
-    }
-  };
-
-  // Firestore allows at most 30 values in an 'in' filter
-  for (let i = 0; i < logins.length; i += 30) {
-    const snapshot = await getDocs(
-      query(usersRef, where('gitHubUsername', 'in', logins.slice(i, i + 30)))
-    );
-    snapshot.docs.forEach((docSnap) => record(docSnap.id, docSnap.data()));
-  }
-
-  if (found.size < wanted.size) {
-    const snapshot = await getDocs(usersRef);
-    snapshot.docs.forEach((docSnap) => record(docSnap.id, docSnap.data()));
-  }
-
-  return found;
-}
-
-/**
- * Fetches everyone on a project, lead first, then active members, then
- * anyone whose invitation is still pending.
- *
- * The roster comes entirely from repository access. Pass the project's
- * membership if it's already loaded to skip fetching it again.
+ * The roster carries teammates' contact details, and profiles are owner-only
+ * in Firestore, so the server assembles it - and only for the project's own
+ * members.
  */
 export async function getProjectTeamMembers(
-  project: Project,
-  repositoryMembers?: RepositoryMembership
+  project: Project
 ): Promise<ProjectTeamMember[]> {
   try {
-    let members = repositoryMembers;
-
-    if (!members) {
-      const { membership, failed } = await getRepositoryMembershipMap([
-        project.repositoryName,
-      ]);
-      if (failed.length > 0) return [];
-      members = membership[project.repositoryName] ?? NO_MEMBERS;
-    }
-
-    // A leftover invite for someone who's already a collaborator shouldn't
-    // list them twice
-    const activeLogins = new Set(members.collaborators.map(normalizeLogin));
-    const entries = [
-      ...members.collaborators.map((login) => ({ login, pending: false })),
-      ...members.pendingInvitees
-        .filter((login) => !activeLogins.has(normalizeLogin(login)))
-        .map((login) => ({ login, pending: true })),
-    ];
-
-    if (entries.length === 0) return [];
-
-    const accounts = await getUsersByGitHubLogin(entries.map((entry) => entry.login));
-
-    const team: ProjectTeamMember[] = entries.map(({ login, pending }) => {
-      const account = accounts.get(normalizeLogin(login));
-
-      if (!account) {
-        return {
-          uid: `github:${login}`,
-          firstName: login,
-          lastName: '',
-          email: '',
-          discordUsername: '',
-          gitHubUsername: login,
-          isLead: false,
-          pending,
-          gitHubOnly: true,
-        };
-      }
-
-      return {
-        uid: account.uid,
-        firstName: account.data.firstName || '',
-        lastName: account.data.lastName || '',
-        email: account.data.email || '',
-        discordUsername: account.data.discordUsername || '',
-        gitHubUsername: account.data.gitHubUsername || login,
-        isLead: Boolean(project.pointOfContact) && account.uid === project.pointOfContact,
-        pending,
-        gitHubOnly: false,
-      };
-    });
-
-    return team.sort((a, b) => {
-      if (a.isLead !== b.isLead) return a.isLead ? -1 : 1;
-      if (a.pending !== b.pending) return a.pending ? 1 : -1;
-      return `${a.firstName} ${a.lastName}`.localeCompare(
-        `${b.firstName} ${b.lastName}`
-      );
-    });
+    const params = new URLSearchParams({ action: 'team', projectId: project.id });
+    const response = await authorizedFetch(`/api/profiles?${params}`);
+    if (!response.ok) return [];
+    return await response.json();
   } catch (error) {
     console.error(`Error fetching team members for ${project.projectName}:`, error);
     return [];
@@ -529,15 +354,11 @@ export async function updateProjectDetails(
  * Hands the lead developer role to another member of the project
  */
 export async function transferProjectLeadership(
-  projectId: string,
+  project: Project,
   newLeadUid: string
 ): Promise<void> {
   try {
-    const project = await getProjectById(projectId);
-    if (!project) {
-      throw new Error('Project not found');
-    }
-
+    // Re-read the roster: someone may have left since the modal opened.
     // Only an active member with an account can take over as lead
     const members = await getProjectTeamMembers(project);
     const newLead = members.find((member) => member.uid === newLeadUid);
@@ -549,7 +370,7 @@ export async function transferProjectLeadership(
       throw new Error('The new lead has to accept their repository invitation first');
     }
 
-    const docRef = doc(collection(db, PROJECTS_COLLECTION), projectId);
+    const docRef = doc(collection(db, PROJECTS_COLLECTION), project.id);
     await updateDoc(docRef, { pointOfContact: newLeadUid });
   } catch (error) {
     console.error('Error transferring project leadership:', error);

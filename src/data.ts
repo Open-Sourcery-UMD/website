@@ -13,6 +13,15 @@ export function getSemesterStart(now: Date = new Date()): Date {
   return new Date(year - 1, 8, 1);
 }
 
+/**
+ * The semester in progress as a label, e.g. "Fall 2026". Early January still
+ * belongs to the previous fall, so it's named after the year that began in.
+ */
+export function getCurrentSemester(now: Date = new Date()): string {
+  const start = getSemesterStart(now);
+  return `${start.getMonth() === 8 ? 'Fall' : 'Spring'} ${start.getFullYear()}`;
+}
+
 // Class standing, as used by a project's yearRange
 export const YEAR_LABELS = [
   'Freshman',
@@ -22,13 +31,13 @@ export const YEAR_LABELS = [
   'Grad Student',
 ];
 
-export const GRAD_STUDENT_STANDING = YEAR_LABELS.length - 1;
+const GRAD_STUDENT_STANDING = YEAR_LABELS.length - 1;
 
 /**
  * Stored in a user's graduationYear when they're a graduate student rather
  * than an undergrad with a year left to go.
  */
-export const GRADUATE_STUDENT = 'Graduate Student';
+const GRADUATE_STUDENT = 'Graduate Student';
 
 // Graduation years offered: this year through this year + 5
 const GRADUATION_YEAR_SPAN = 5;
@@ -49,7 +58,7 @@ export function getGraduationYearOptions(now: Date = new Date()): string[] {
   return [...years, GRADUATE_STUDENT];
 }
 
-export function isGraduateStudent(graduationYear: string | null): boolean {
+function isGraduateStudent(graduationYear: string | null): boolean {
   return graduationYear === GRADUATE_STUDENT;
 }
 
@@ -57,7 +66,7 @@ export function isGraduateStudent(graduationYear: string | null): boolean {
  * The academic year a date falls in. It rolls over on September 1, so from
  * that date the class of 2030 counts as freshmen.
  */
-export function getAcademicYear(now: Date = new Date()): number {
+function getAcademicYear(now: Date = new Date()): number {
   return now.getMonth() >= 8 ? now.getFullYear() + 1 : now.getFullYear();
 }
 
@@ -100,6 +109,37 @@ export function formatYearRange(min: number, max: number): string {
       : `${YEAR_LABELS[min]}s and Up`;
   }
   return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
+}
+
+/**
+ * Gems awarded for each kind of activity. The server's formula and the gems
+ * page's explainer both read from here, so the two can't drift apart.
+ */
+export const GEM_VALUES = {
+  /** Hack Sessions and General Body Meetings */
+  specialEvent: 50,
+  /** Every other event - socials, workshops and so on */
+  otherEvent: 100,
+  /** Each issue opened in a project you're on */
+  issueInOwnProject: 20,
+  /** Each PR merged into a project you're on */
+  prIntoOwnProject: 30,
+  /** Each PR merged into another Open Sourcery project (any org repository) */
+  prIntoOtherProject: 50,
+  /** Each PR merged into a public repository outside Open Sourcery */
+  prIntoPublicRepo: 10,
+} as const;
+
+/**
+ * Why a lead can't leave their own project. Shared by the server, which
+ * enforces it, and the Leave buttons, which catch it before asking to confirm.
+ */
+export function leadCannotLeaveMessage(projectName: string): string {
+  return (
+    `You're the Lead Developer of "${projectName}", so you can't leave it yet. ` +
+    `Transfer leadership to another member first: on the home page, open Edit Project ` +
+    `in your project's section.`
+  );
 }
 
 export const BOARD_MEMBERS = ['Om Arya', 'Shreyas Thirumale', 'Sifene Fufa', 'Lina Hsu', 'Diksha Pal', 'Colin Kurniawan'];

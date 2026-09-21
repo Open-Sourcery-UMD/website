@@ -15,7 +15,7 @@ import { useAuth } from '@context/AuthContext';
 
 const Home = () => {
   const { firestoreUser } = useAuth();
-  const openSourceryProjectsLink = 'https://github.com/open-sourcery-umd';
+  const ourProjectsLink = '/our-projects';
   const umdLink = 'https://umd.edu/';
 
   const [displayText, setDisplayText] = useState('');
@@ -108,7 +108,7 @@ const Home = () => {
             who build open-source software applications and connect over our shared
             love for creating.
           </p>
-          <ExploreLink href={openSourceryProjectsLink} />
+          <ExploreLink href={ourProjectsLink} />
         </div>
           </div>
 
@@ -138,7 +138,7 @@ const Home = () => {
           <GradientBox
             title="Start a new project"
             color="orange"
-            text="Have a cool idea? Fill out our project proposal form to become a Lead Developer of an open-source project team and connect with likeminded contributors."
+            text="Have a cool idea? Submit a project proposal to become a Lead Developer of an open-source project team and connect with likeminded contributors."
             link="/project-proposal-form"
             label="Start a Project"
             icon={
@@ -161,8 +161,8 @@ const Home = () => {
           <GradientBox
             title="Join an ongoing project"
             color="blue"
-            text="Enter our team matching portal to join our community of Developers and help build awesome open-source software on a project team."
-            link="/team-matching-portal"
+            text="Browse our projects to join our community of Developers and help build awesome open-source software on a project team."
+            link="/our-projects"
             label="Join a Project"
             icon={
               <svg

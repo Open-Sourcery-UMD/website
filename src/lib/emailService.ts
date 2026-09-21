@@ -41,9 +41,10 @@ export async function sendEmail(
   });
 
   if (!response.ok) {
+    // A body can only be read once; reading it again would throw instead
     const errorText = await response.text();
     console.error("Brevo error:", errorText);
-    throw new Error(await response.text());
+    throw new Error(errorText);
   }
 
   return { success: true };

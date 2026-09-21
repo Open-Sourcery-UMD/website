@@ -15,7 +15,7 @@ export const navigationItems = [
     color: 'white',
     subItems: [
       { name: 'Start a project', link: '/project-proposal-form' },
-      { name: 'Join a project', link: '/team-matching-portal'}
+      { name: 'Join a project', link: '/our-projects'}
     ],
   },
   {

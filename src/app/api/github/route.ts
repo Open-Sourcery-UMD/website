@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getGitHubUser,
   getOrganizationRepositoryVisibility,
-  getRepositoryTeamMembers,
-  getUserRepositoryActivity,
-  getMergedPRsInOtherRepos,
-  getUserCommitsSince,
-  getEffectiveRepoUserCount,
   getProjectOverview,
   getRepositoryMembershipMap,
   isPublicOrgRepository,
@@ -47,18 +42,9 @@ function splitList(value: string | null): string[] {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const action = searchParams.get("action");
-  const repo = searchParams.get("repo");
 
   try {
-    // Backward compat: ?repo=X without action returns team members
-    if (repo && !action) {
-      await requirePublicRepo(repo);
-      const members = await getRepositoryTeamMembers(GITHUB_ORG, repo);
-      return NextResponse.json(members);
-    }
-
-    switch (action) {
+    switch (searchParams.get("action")) {
       case "validateUser": {
         const { username } = requireParams({ username: searchParams.get("username") });
         const exists = await getGitHubUser(username);
@@ -73,20 +59,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(publicRepos);
       }
 
-      case "teamMembers": {
-        const { repo: repoName } = requireParams({ repo: searchParams.get("repo") });
-        await requirePublicRepo(repoName);
-        const members = await getRepositoryTeamMembers(GITHUB_ORG, repoName);
-        return NextResponse.json(members);
-      }
-
-      case "repoCapacity": {
-        const { repo: repoName } = requireParams({ repo: searchParams.get("repo") });
-        await requirePublicRepo(repoName);
-        const stats = await getEffectiveRepoUserCount(GITHUB_ORG, repoName);
-        return NextResponse.json(stats);
-      }
-
       case "repoMembership": {
         // Comma-separated repository names; GitHub repo names can't contain commas
         const repos = splitList(searchParams.get("repos"));
@@ -94,10 +66,11 @@ export async function GET(request: NextRequest) {
         // Skipping the cache costs two GitHub calls per repository, so only
         // signed-in callers may ask for it - otherwise anyone could burn
         // through the token's rate limit
-        const fresh =
-          searchParams.get("fresh") === "1" && (await getOptionalUser(request)) !== null;
-
-        const visibility = await getOrganizationRepositoryVisibility(GITHUB_ORG);
+        const [fresh, visibility] = await Promise.all([
+          searchParams.get("fresh") === "1" &&
+            getOptionalUser(request).then((uid) => uid !== null),
+          getOrganizationRepositoryVisibility(GITHUB_ORG),
+        ]);
         const publicRepos = repos.filter(
           (name) => visibility.get(name.toLowerCase()) === false
         );
@@ -106,8 +79,9 @@ export async function GET(request: NextRequest) {
 
         // Repos that don't exist yet (a proposed project) - or that are
         // private - have no members as far as this API is concerned
+        const failed = new Set(result.failed);
         for (const name of repos) {
-          if (!(name in result.membership) && !result.failed.includes(name)) {
+          if (!(name in result.membership) && !failed.has(name)) {
             result.membership[name] = { collaborators: [], pendingInvitees: [] };
           }
         }
@@ -120,59 +94,6 @@ export async function GET(request: NextRequest) {
         await requirePublicRepo(repoName);
         const overview = await getProjectOverview(GITHUB_ORG, repoName);
         return NextResponse.json(overview);
-      }
-
-      case "activity": {
-        const params = requireParams({
-          username: searchParams.get("username"),
-          repo: searchParams.get("repo"),
-          since: searchParams.get("since"),
-        });
-
-        // Takes a full owner/repo name, so pin the owner to the org as well
-        const [owner, repoName] = params.repo.split("/");
-        if (!owner || !repoName || owner.toLowerCase() !== GITHUB_ORG.toLowerCase()) {
-          throw new HttpError(404, "Repository not found");
-        }
-        await requirePublicRepo(repoName);
-
-        const activity = await getUserRepositoryActivity(
-          params.username,
-          params.repo,
-          new Date(params.since)
-        );
-        return NextResponse.json(activity);
-      }
-
-      case "otherPRs": {
-        const params = requireParams({
-          username: searchParams.get("username"),
-          since: searchParams.get("since"),
-        });
-        // Optional: a developer on no project has nothing to exclude, but
-        // their outside PRs still earn gems. The search itself is is:public.
-        const prs = await getMergedPRsInOtherRepos(
-          params.username,
-          splitList(searchParams.get("excludeRepos")),
-          new Date(params.since)
-        );
-        return NextResponse.json(prs);
-      }
-
-      case "commits": {
-        const params = requireParams({
-          username: searchParams.get("username"),
-          repo: searchParams.get("repo"),
-          since: searchParams.get("since"),
-        });
-        await requirePublicRepo(params.repo);
-        const count = await getUserCommitsSince(
-          GITHUB_ORG,
-          params.repo,
-          params.username,
-          new Date(params.since)
-        );
-        return NextResponse.json({ count });
       }
 
       default:

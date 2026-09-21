@@ -30,29 +30,34 @@ async function main() {
     if (login) usersByLogin.set(login, userDoc);
   }
 
+  // Don't nag members of archived projects
+  const activeProjects = projectsSnapshot.docs
+    .map((projectDoc) => projectDoc.data())
+    .filter((project) => project.status !== "ARCHIVED" && project.repositoryName);
+
+  // Every team's membership at once, rather than one project at a time
+  const memberships = await Promise.allSettled(
+    activeProjects.map((project) =>
+      getRepositoryMembership(GITHUB_ORG, project.repositoryName)
+    )
+  );
+
   // At most one warning per person per run, even if they're on several projects
   const warnedThisRun = new Set<string>();
   let warningsSent = 0;
 
-  for (const projectDoc of projectsSnapshot.docs) {
-    const project = projectDoc.data();
+  for (const [index, project] of activeProjects.entries()) {
+    const repoName: string = project.repositoryName;
+    const result = memberships[index];
 
-    // Don't nag members of archived projects
-    if (project.status === "ARCHIVED") continue;
-
-    const repoName = project.repositoryName;
-    if (!repoName) continue;
-
-    let members;
-    try {
-      members = await getRepositoryMembership(GITHUB_ORG, repoName);
-    } catch (error) {
+    if (result.status === "rejected") {
       console.error(
         `Skipping "${project.projectName}": couldn't read its members from GitHub`,
-        error
+        result.reason
       );
       continue;
     }
+    const members = result.value;
 
     for (const login of [...members.collaborators, ...members.pendingInvitees]) {
       const userDoc = usersByLogin.get(login.toLowerCase());

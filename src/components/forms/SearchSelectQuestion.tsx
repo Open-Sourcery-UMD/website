@@ -118,7 +118,7 @@ const SearchSelectQuestion: React.FC<SearchSelectQuestionProps> = ({
         {/* Suggestions Dropdown */}
         {showSuggestions && !isSuggestionsDisabled && (
           <div className="absolute top-15 left-0 right-0 z-20">
-            <div className="bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto">
 
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((option) => (

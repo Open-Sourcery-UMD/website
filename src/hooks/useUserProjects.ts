@@ -8,7 +8,6 @@ import {
   getProjectsForUser,
   getRepositoryMembers,
   loadProjectMembership,
-  ProjectMembership,
 } from '@/lib/projectService';
 
 interface UseUserProjectsResult {
@@ -21,8 +20,6 @@ interface UseUserProjectsResult {
    * commitment: while one is pending they can't join another project.
    */
   pendingProposals: Project[];
-  /** The full snapshot, for views that also need other people's membership */
-  membership: ProjectMembership | null;
   loading: boolean;
   /**
    * Something couldn't be checked, so `projects` or `pendingProposals` may be
@@ -47,7 +44,6 @@ export function useUserProjects(): UseUserProjectsResult {
   const uid = firebaseUser?.uid || '';
   const gitHubUsername = firestoreUser?.gitHubUsername || '';
 
-  const [membership, setMembership] = useState<ProjectMembership | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [pendingProjectIds, setPendingProjectIds] = useState<Set<string>>(new Set());
   const [pendingProposals, setPendingProposals] = useState<Project[]>([]);
@@ -95,7 +91,6 @@ export function useUserProjects(): UseUserProjectsResult {
             .map((project) => project.id)
         );
 
-        setMembership(snapshot);
         setProjects(userProjects);
         setPendingProjectIds(pending);
         isIncomplete ||= snapshot.failedRepos.length > 0;
@@ -104,7 +99,6 @@ export function useUserProjects(): UseUserProjectsResult {
           console.error('Error loading project membership:', membershipResult.reason);
           isIncomplete = true;
         }
-        setMembership(null);
         setProjects([]);
         setPendingProjectIds(new Set());
       }
@@ -132,7 +126,6 @@ export function useUserProjects(): UseUserProjectsResult {
     projects,
     pendingProjectIds,
     pendingProposals,
-    membership,
     loading: authLoading || loading,
     incomplete,
     refresh,

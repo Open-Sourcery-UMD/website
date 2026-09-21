@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Project, TECHNOLOGIES, YEAR_LABELS } from '@data';
 import {
   ProjectTeamMember,
   transferProjectLeadership,
   updateProjectDetails,
 } from '@/lib/projectService';
+
+const ALL_TECHNOLOGIES = TECHNOLOGIES.flatMap((group) => group.technologies);
 
 interface ProjectSettingsModalProps {
   project: Project;
@@ -30,7 +32,7 @@ const Pill = ({
     onClick={onClick}
     className={`px-3 py-1 rounded-full text-sm transition ${
       active
-        ? 'y2k-button text-graphite font-medium'
+        ? 'y2k-button text-white font-medium'
         : 'bg-graphite/[0.06] text-graphite-soft hover:bg-graphite/10'
     }`}
   >
@@ -45,11 +47,6 @@ const ProjectSettingsModal = ({
   onClose,
   onSaved,
 }: ProjectSettingsModalProps) => {
-  const allTechnologies = useMemo(
-    () => TECHNOLOGIES.flatMap((group) => group.technologies),
-    []
-  );
-
   const [technologiesUsed, setTechnologiesUsed] = useState<string[]>(
     project.technologiesUsed ?? []
   );
@@ -125,7 +122,7 @@ const ProjectSettingsModal = ({
     setError('');
 
     try {
-      await transferProjectLeadership(project.id, newLeadUid);
+      await transferProjectLeadership(project, newLeadUid);
       onSaved();
       onClose();
     } catch (err) {
@@ -173,7 +170,7 @@ const ProjectSettingsModal = ({
             Everything the project uses. Mark the must-haves as required below.
           </p>
           <div className="flex flex-wrap gap-2">
-            {allTechnologies.map((tech) => (
+            {ALL_TECHNOLOGIES.map((tech) => (
               <Pill
                 key={tech}
                 label={tech}

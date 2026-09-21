@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@firebaseConfig";
@@ -13,7 +14,13 @@ import {
   UNSAVED_CHANGES_MESSAGE,
   useUnsavedChangesWarning,
 } from "@hooks/useUnsavedChangesWarning";
-import { getGraduationYearOptions, Project, TECHNOLOGIES, TOPICS } from "@data";
+import {
+  getGraduationYearOptions,
+  leadCannotLeaveMessage,
+  Project,
+  TECHNOLOGIES,
+  TOPICS,
+} from "@data";
 import TextQuestion from "@components/forms/TextQuestion";
 import MultipleChoiceQuestion from "@components/forms/MultipleChoiceQuestion";
 import SelectMultipleQuestion from "@components/forms/SelectMultipleQuestion";
@@ -209,7 +216,7 @@ export default function SettingsPage() {
       setOriginalData(formData);
 
       setSuccessMessage("Changes saved successfully!");
-      setTimeout(() => setSuccessMessage(""), 3000);
+      setTimeout(() => setSuccessMessage(""), 2000);
     } catch (error) {
       console.error("Error updating profile:", error);
       setErrorMessage(
@@ -224,17 +231,17 @@ export default function SettingsPage() {
 
   const handleCancel = () => {
     if (hasChanges && !window.confirm(UNSAVED_CHANGES_MESSAGE)) return;
-
-    if (originalData) {
-      setFormData(originalData);
-      setErrorMessage("");
-      setSuccessMessage("");
-    }
     router.push("/");
   };
 
   const handleLeaveProject = async (project: Project) => {
     if (!firebaseUser?.uid) return;
+
+    // Caught here too so a lead isn't asked to confirm something that can't happen
+    if (project.pointOfContact === firebaseUser.uid) {
+      window.alert(leadCannotLeaveMessage(project.projectName));
+      return;
+    }
 
     const confirmed = window.confirm(
       `Are you sure you want to leave "${project.projectName}"? ` +
@@ -573,7 +580,9 @@ export default function SettingsPage() {
                             to start contributing.
                           </>
                         ) : (
-                          "You are currently a member of this project."
+                          project.pointOfContact === firebaseUser.uid
+                            ? "You are currently the Lead Developer of this project."
+                            : "You are currently a Developer on this project."
                         )}
                       </p>
                     </div>
@@ -593,7 +602,13 @@ export default function SettingsPage() {
               We couldn&apos;t check your project membership with GitHub right now. Please try again later.
             </p>
           ) : pendingProposals.length === 0 ? (
-            <p className="text-gray-500">No current project. Visit the Team Matching Portal to join one.</p>
+            <p className="text-gray-500">
+              No current project. Visit{' '}
+              <Link href="/our-projects" className="text-azure underline">
+                Our Projects
+              </Link>{' '}
+              to join one.
+            </p>
           ) : null}
         </div>
 

@@ -68,8 +68,8 @@ async function notifyArchivedProjects(): Promise<number> {
           `The project "${project.projectName}" has been archived and is no longer ` +
           `an active Open Sourcery project. Thank you for the work you put into it!\n\n` +
           `You're welcome to leave the project from your settings page and join a new ` +
-          `team whenever you're ready; head to the Team Matching Portal to see what ` +
-          `else is looking for developers.\n\n` +
+          `team whenever you're ready; head to Our Projects on the website to see ` +
+          `which teams are looking for developers.\n\n` +
           `- Open Sourcery`
       );
 
@@ -84,25 +84,20 @@ async function notifyArchivedProjects(): Promise<number> {
   return notified;
 }
 
-async function main() {
-  const archiveNotifications = await notifyArchivedProjects();
-  console.log(
-    `${archiveNotifications} developer(s) notified about archived projects.`
-  );
-
-  // Get all PROPOSED projects
-  const proposedSnapshot = await db
-    .collection("projects")
-    .where("status", "==", "PROPOSED")
-    .get();
+/**
+ * Moves each PROPOSED project whose repository now exists to IN_PROGRESS and
+ * emails its proposer. Returns how many were moved.
+ */
+async function activateProposedProjects(): Promise<number> {
+  const [proposedSnapshot, orgRepos] = await Promise.all([
+    db.collection("projects").where("status", "==", "PROPOSED").get(),
+    getOrganizationRepositories(GITHUB_ORG),
+  ]);
 
   if (proposedSnapshot.empty) {
     console.log("No PROPOSED projects found.");
-    return;
+    return 0;
   }
-
-  // Get org repos from GitHub
-  const orgRepos = await getOrganizationRepositories(GITHUB_ORG);
 
   let updated = 0;
 
@@ -147,6 +142,19 @@ async function main() {
     updated++;
   }
 
+  return updated;
+}
+
+async function main() {
+  // The two jobs touch different projects, so they run side by side
+  const [archiveNotifications, updated] = await Promise.all([
+    notifyArchivedProjects(),
+    activateProposedProjects(),
+  ]);
+
+  console.log(
+    `${archiveNotifications} developer(s) notified about archived projects.`
+  );
   console.log(
     `Project status update script complete. ${updated} project(s) updated to IN_PROGRESS.`
   );

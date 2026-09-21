@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { formatYearRange, TECHNOLOGIES, TOPICS, YEAR_LABELS } from '@data';
 import { useAuth } from '@context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,8 @@ const TOPICS_MAX = 20;
 const GITHUB_REPO_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const PAGE_COUNT = 4;
+const ALL_TECHNOLOGIES = TECHNOLOGIES.flatMap((group) => group.technologies);
+const ALL_TOPICS = TOPICS.flatMap((group) => group.topics).sort((a, b) => a.localeCompare(b));
 const SECTION_LABELS = ['Project Info', 'Team Settings', 'Technologies & Topics', 'Confirmation'];
 
 const ProjectProposalPage = () => {
@@ -52,16 +54,6 @@ const ProjectProposalPage = () => {
       router.push('/log-in');
     }
   }, [loading, firebaseUser, router]);
-
-  const allTechnologies = useMemo(
-    () => TECHNOLOGIES.flatMap((group) => group.technologies),
-    []
-  );
-
-  const allTopics = useMemo(
-    () => TOPICS.flatMap((group) => group.topics).sort((a, b) => a.localeCompare(b)),
-    []
-  );
 
   if (loading || !firebaseUser || !firestoreUser || loadingProjects) {
     return null;
@@ -165,7 +157,19 @@ const ProjectProposalPage = () => {
         return;
       }
 
-      await fetch("/api/email", {
+      await createProjectProposal(firebaseUser.uid, {
+        projectName,
+        description,
+        yearRange: [yearMin, yearMax],
+        technologiesUsed,
+        technologiesRequired,
+        topics,
+        maxTeamSize,
+      });
+
+      // Once the proposal exists, tell the board. Not awaited: the proposal is
+      // what matters, and the confirmation shouldn't wait on an email.
+      fetch("/api/email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -191,24 +195,14 @@ const ProjectProposalPage = () => {
             2. Ensure @${firestoreUser.gitHubUsername} has been granted write access to the UMD Open Sourcery GitHub organization, and grant them admin access to their new repository.
             3. Email ${firebaseUser.email} to inform them that their project's repository has been created, and to schedule an onboarding meeting.
             4. Update @${firestoreUser.discordUsername}'s Discord roles to include "Lead Developer" and "Developer".
-            5. Send a message in the #team-matching Discord channel that @${firestoreUser.discordUsername} has started the '${projectName}' project.
+            5. Send a message in the #project-updates Discord channel that @${firestoreUser.discordUsername} has started the '${projectName}' project.
                Ex: 🚨 NEW PROJECT ALERT 🚨
                    @${firestoreUser.discordUsername} has started the '${projectName}' project!
 
           Happy hacking!
           `,
         }),
-      });
-
-      await createProjectProposal(firebaseUser.uid, {
-        projectName,
-        description,
-        yearRange: [yearMin, yearMax],
-        technologiesUsed,
-        technologiesRequired,
-        topics,
-        maxTeamSize,
-      });
+      }).catch((err) => console.error('Failed to email the board:', err));
 
       setCurrentPage(4);
     } catch (err) {
@@ -331,8 +325,8 @@ const ProjectProposalPage = () => {
           >
             <SelectMultipleQuestion
               question="Technologies Used"
-              options={allTechnologies}
-              maxSelected={allTechnologies.length}
+              options={ALL_TECHNOLOGIES}
+              maxSelected={ALL_TECHNOLOGIES.length}
               isRequired={true}
               value={technologiesUsed}
               onChange={setTechnologiesUsed}
@@ -343,8 +337,8 @@ const ProjectProposalPage = () => {
 
             <SelectMultipleQuestion
               question="Technologies Required"
-              options={technologiesUsed.length > 0 ? technologiesUsed : allTechnologies}
-              maxSelected={technologiesUsed.length > 0 ? technologiesUsed.length : allTechnologies.length}
+              options={technologiesUsed.length > 0 ? technologiesUsed : ALL_TECHNOLOGIES}
+              maxSelected={technologiesUsed.length > 0 ? technologiesUsed.length : ALL_TECHNOLOGIES.length}
               isRequired={false}
               value={technologiesRequired}
               onChange={setTechnologiesRequired}
@@ -356,7 +350,7 @@ const ProjectProposalPage = () => {
             <SearchSelectQuestion
               question="Topics"
               placeholder="Search topics..."
-              options={allTopics}
+              options={ALL_TOPICS}
               minSelected={1}
               maxSelected={TOPICS_MAX}
               value={topics}

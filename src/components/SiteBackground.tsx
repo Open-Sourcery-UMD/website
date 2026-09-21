@@ -15,7 +15,7 @@ export default function SiteBackground() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-pastel-canvas"
+      className="site-canvas pointer-events-none fixed inset-x-0 top-0 -z-10 overflow-hidden bg-pastel-canvas"
     >
       {/* Periwinkle, high and to the left */}
       <div

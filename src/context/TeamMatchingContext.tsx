@@ -22,7 +22,9 @@ export const TeamMatchingProvider = ({ children }: { children: ReactNode }) => {
     topics: [],
   });
 
-  // Initialize team matching data when firestoreUser becomes available
+  // Mirror the signed-in user's preferences, and clear them on sign-out -
+  // otherwise the previous account's interests stayed highlighted on pages
+  // reached without a full reload
   useEffect(() => {
     if (firestoreUser) {
       setData({
@@ -30,6 +32,8 @@ export const TeamMatchingProvider = ({ children }: { children: ReactNode }) => {
         technologies: firestoreUser.technologiesExperiencedWith || [],
         topics: firestoreUser.preferredTopics || [],
       });
+    } else {
+      setData({ year: null, technologies: [], topics: [] });
     }
   }, [firestoreUser]);
 

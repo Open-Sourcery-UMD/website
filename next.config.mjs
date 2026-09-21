@@ -6,9 +6,16 @@ async function loadConfig() {
   });
 
   return withBundleAnalyzer({
-    // reactStrictMode: true,
-    eslint: {
-      ignoreDuringBuilds: true,
+    // The project list used to live at /team-matching-portal; links to it
+    // are out in emails and bookmarks, so keep them working
+    async redirects() {
+      return [
+        {
+          source: '/team-matching-portal',
+          destination: '/our-projects',
+          permanent: true,
+        },
+      ];
     },
   });
 }

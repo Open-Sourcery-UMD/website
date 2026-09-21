@@ -57,7 +57,7 @@ async function fetchAllPages(
  */
 export async function getGitHubUser(username: string): Promise<boolean> {
   try {
-    const response = await fetch(`https://api.github.com/users/${username}`, {
+    const response = await fetch(`${GITHUB_API}/users/${username}`, {
       headers: authHeaders(),
     });
     return response.status === 200;
@@ -80,7 +80,7 @@ export async function inviteUserToOrganization(
   }
 
   const response = await fetch(
-    `https://api.github.com/orgs/${org}/memberships/${username}`,
+    `${GITHUB_API}/orgs/${org}/memberships/${username}`,
     {
       method: "PUT",
       headers: {
@@ -112,7 +112,7 @@ export async function getOrganizationRepositories(
 
   while (true) {
     const response = await fetch(
-      `https://api.github.com/orgs/${org}/repos?page=${page}&per_page=${perPage}`,
+      `${GITHUB_API}/orgs/${org}/repos?page=${page}&per_page=${perPage}`,
       { headers: authHeaders() }
     );
 
@@ -200,73 +200,17 @@ export async function isPublicOrgRepository(
   return visibility.get(repo.toLowerCase()) === false;
 }
 
-/**
- * Gets list of GitHub users who have write access to a repository
- */
-export async function getRepositoryTeamMembers(
-  owner: string,
-  repo: string
-): Promise<string[]> {
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/collaborators?affiliation=direct&per_page=${PER_PAGE}`,
-      { headers: authHeaders() }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch collaborators: ${response.statusText}`);
-    }
-
-    const collaborators = await response.json();
-
-    return collaborators.map((collab: any) => collab.login);
-  } catch (error) {
-    console.error(
-      `Error fetching direct admin members for ${owner}/${repo}:`,
-      error
-    );
-    return [];
-  }
-}
-
-export async function getRepositoryInvitations(org: string, repo: string) {
-  const res = await fetch(
-    `https://api.github.com/repos/${org}/${repo}/invitations`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-      },
-    }
+async function getRepositoryInvitations(owner: string, repo: string): Promise<any[]> {
+  const response = await fetch(
+    `${GITHUB_API}/repos/${owner}/${repo}/invitations?per_page=${PER_PAGE}`,
+    { headers: authHeaders() }
   );
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch repository invitations");
+  if (!response.ok) {
+    throw new Error(`Failed to fetch invitations for ${owner}/${repo}: ${response.status}`);
   }
 
-  return res.json();
-}
-
-/**
- * Gets effective repository user count (active users + pending invites).
- *
- * Counts exactly the project's members, so the token's own account - a
- * collaborator on repos it created, but not a developer - is left out.
- */
-export async function getEffectiveRepoUserCount(
-  org: string,
-  repo: string
-) {
-  const { collaborators, pendingInvitees } = await getRepositoryMembership(
-    org,
-    repo
-  );
-
-  return {
-    activeUsers: collaborators.length,
-    pendingInvites: pendingInvitees.length,
-    totalEffective: collaborators.length + pendingInvitees.length,
-  };
+  return response.json();
 }
 
 /**
@@ -283,7 +227,7 @@ export async function inviteUserToRepository(
   }
 
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/collaborators/${username}`,
+    `${GITHUB_API}/repos/${owner}/${repo}/collaborators/${username}`,
     {
       method: "PUT",
       headers: {
@@ -304,102 +248,6 @@ export async function inviteUserToRepository(
   console.log(`Invited ${username} to ${owner}/${repo} with write access`);
 }
 
-/** Permission levels the collaborators endpoint accepts */
-export type RepositoryPermission =
-  | "pull"
-  | "triage"
-  | "push"
-  | "maintain"
-  | "admin";
-
-export interface RepositoryCollaborator {
-  login: string;
-  /** GitHub's role name: admin, maintain, write, triage or read */
-  roleName: string;
-  isAdmin: boolean;
-}
-
-/**
- * Lists a repository's direct collaborators with the permission each holds
- */
-export async function getRepositoryCollaboratorRoles(
-  owner: string,
-  repo: string
-): Promise<RepositoryCollaborator[]> {
-  const response = await fetch(
-    `${GITHUB_API}/repos/${owner}/${repo}/collaborators` +
-      `?affiliation=direct&per_page=${PER_PAGE}`,
-    { headers: authHeaders() }
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch collaborators for ${owner}/${repo}: ${response.status}`
-    );
-  }
-
-  const collaborators = await response.json();
-
-  return collaborators.map((collaborator: any) => ({
-    login: collaborator.login,
-    roleName: collaborator.role_name || "",
-    isAdmin: Boolean(collaborator.permissions?.admin),
-  }));
-}
-
-/**
- * Changes an existing collaborator's permission on a repository
- */
-export async function setRepositoryPermission(
-  username: string,
-  owner: string,
-  repo: string,
-  permission: RepositoryPermission
-): Promise<void> {
-  const response = await fetch(
-    `${GITHUB_API}/repos/${owner}/${repo}/collaborators/${username}`,
-    {
-      method: "PUT",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ permission }),
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to set ${username}'s permission on ${owner}/${repo}: ${response.status}`
-    );
-  }
-}
-
-/**
- * Changes the permission attached to a pending invitation.
- *
- * The invitations endpoint names levels differently from the collaborators
- * one: "write" here is "push" there.
- */
-export async function setRepositoryInvitationPermission(
-  owner: string,
-  repo: string,
-  invitationId: number,
-  permissions: "read" | "triage" | "write" | "maintain" | "admin"
-): Promise<void> {
-  const response = await fetch(
-    `${GITHUB_API}/repos/${owner}/${repo}/invitations/${invitationId}`,
-    {
-      method: "PATCH",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ permissions }),
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to update invitation ${invitationId} on ${owner}/${repo}: ${response.status}`
-    );
-  }
-}
-
 // The account behind GITHUB_TOKEN is a collaborator on every repo it manages,
 // but it isn't a developer on any team, so rosters leave it out
 let cachedBotLogin: string | null | undefined;
@@ -407,7 +255,7 @@ let cachedBotLogin: string | null | undefined;
 /**
  * Gets the login of the account the API token belongs to
  */
-export async function getAuthenticatedUser(): Promise<string | null> {
+async function getAuthenticatedUser(): Promise<string | null> {
   if (cachedBotLogin !== undefined) return cachedBotLogin;
 
   try {
@@ -457,7 +305,7 @@ function membershipKey(owner: string, repo: string): string {
 /**
  * Drops a cached membership lookup, so the next read sees a change right away
  */
-export function invalidateRepositoryMembership(owner: string, repo: string) {
+function invalidateRepositoryMembership(owner: string, repo: string) {
   membershipCache.delete(membershipKey(owner, repo));
 }
 
@@ -597,10 +445,17 @@ export async function removeUserFromRepository(
     return;
   }
 
-  const response = await fetch(
-    `${GITHUB_API}/repos/${owner}/${repo}/collaborators/${username}`,
-    { method: "DELETE", headers: authHeaders() }
-  );
+  // Independent requests, so revoke access and look up invitations together
+  const [response, invitations] = await Promise.all([
+    fetch(`${GITHUB_API}/repos/${owner}/${repo}/collaborators/${username}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    }),
+    getRepositoryInvitations(owner, repo).catch((error) => {
+      console.error(`Error listing invitations on ${owner}/${repo}:`, error);
+      return [];
+    }),
+  ]);
 
   if (!response.ok && response.status !== 404) {
     throw new Error(
@@ -610,7 +465,6 @@ export async function removeUserFromRepository(
 
   // Cancel a pending invitation if one is still outstanding
   try {
-    const invitations = await getRepositoryInvitations(owner, repo);
     const pending = invitations.find(
       (invite: any) =>
         invite.invitee?.login?.toLowerCase() === username.toLowerCase()
@@ -654,10 +508,24 @@ export async function getUserRepositoryActivity(
     // The issues endpoint honors `creator`, but its `since` filters on
     // updated_at - an issue opened last semester and commented on this one
     // still comes back, so created_at has to be checked here.
-    const issues = await fetchAllPages(
-      `${GITHUB_API}/repos/${owner}/${repoName}/issues` +
-        `?creator=${encodeURIComponent(username)}&state=all&since=${sinceISO}`
-    );
+    //
+    // The pulls endpoint silently ignores `creator` and `since` - it accepts
+    // neither - so every filter has to be applied to the response ourselves.
+    // Without the author check, every developer on a project is credited with
+    // the whole team's merged PRs.
+    const [issues, prs] = await Promise.all([
+      fetchAllPages(
+        `${GITHUB_API}/repos/${owner}/${repoName}/issues` +
+          `?creator=${encodeURIComponent(username)}&state=all&since=${sinceISO}`
+      ),
+      fetchAllPages(
+        `${GITHUB_API}/repos/${owner}/${repoName}/pulls` +
+          `?state=closed&sort=updated&direction=desc`,
+        // Newest-updated first, and merging always bumps updated_at, so once a
+        // page ends before the window nothing after it can have merged inside it
+        (page) => new Date(page[page.length - 1].updated_at) < since
+      ),
+    ]);
 
     const openedIssuesCount = issues.filter(
       (issue: any) =>
@@ -665,18 +533,6 @@ export async function getUserRepositoryActivity(
         issue.user?.login?.toLowerCase() === login &&
         new Date(issue.created_at) >= since
     ).length;
-
-    // The pulls endpoint silently ignores `creator` and `since` - it accepts
-    // neither - so every filter has to be applied to the response ourselves.
-    // Without the author check, every developer on a project is credited with
-    // the whole team's merged PRs.
-    const prs = await fetchAllPages(
-      `${GITHUB_API}/repos/${owner}/${repoName}/pulls` +
-        `?state=closed&sort=updated&direction=desc`,
-      // Newest-updated first, and merging always bumps updated_at, so once a
-      // page ends before the window nothing after it can have merged inside it
-      (page) => new Date(page[page.length - 1].updated_at) < since
-    );
 
     const mergedPRsCount = prs.filter(
       (pr: any) =>
@@ -695,48 +551,111 @@ export async function getUserRepositoryActivity(
   }
 }
 
+export interface OutsidePR {
+  repo: string;
+  mergedAt: string;
+}
+
+// Searches carried per GraphQL request. Big enough that a whole membership
+// fits in a handful of requests, small enough that each finishes promptly.
+const GRAPHQL_SEARCH_BATCH = 25;
+
+// GitHub usernames: letters, digits and single hyphens, at most 39 characters
+const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
+
 /**
- * Gets merged PRs by user in public repos other than the specified ones since a date
+ * Merged PRs into public repositories for many users at once, each excluding
+ * the repositories listed for them (their own projects, counted separately).
+ *
+ * REST search allows 30 requests a minute, so a search per member silently
+ * dropped most people's results - 76 of 105 refused on one leaderboard run.
+ * GraphQL carries many aliased searches in one request, at about a point
+ * apiece from a 5,000-point hourly budget.
+ *
+ * Returns a map keyed by lowercased login. A login absent from the map
+ * couldn't be looked up, and callers must not read that as "no PRs".
  */
-export async function getMergedPRsInOtherRepos(
-  username: string,
-  excludeRepos: string[],
+export async function getMergedPRsInOtherReposBatch(
+  requests: { login: string; excludeRepos: string[] }[],
   since: Date
-): Promise<{ repo: string; mergedAt: string }[]> {
-  try {
-    const sinceDate = since.toISOString().split("T")[0];
-    const qualifiers = [
-      `author:${username}`,
-      "is:pr",
-      "is:merged",
-      "is:public",
-      `merged:>=${sinceDate}`,
-    ];
+): Promise<Map<string, OutsidePR[]>> {
+  const sinceDate = since.toISOString().split("T")[0];
+  const results = new Map<string, OutsidePR[]>();
 
-    // Their own projects' PRs are counted separately; a developer on no
-    // project has nothing to exclude
-    for (const repo of excludeRepos) {
-      if (repo) qualifiers.push(`-repo:${repo}`);
+  // One search per login, and none for strings that can't be a username -
+  // interpolated into a query they could change its meaning
+  const searchable = new Map<string, { login: string; excludeRepos: string[] }>();
+  for (const request of requests) {
+    const login = request.login.trim();
+    const key = login.toLowerCase();
+    if (!GITHUB_LOGIN.test(login)) {
+      results.set(key, []);
+      continue;
     }
-
-    const response = await fetch(
-      `${GITHUB_API}/search/issues` +
-        `?q=${encodeURIComponent(qualifiers.join(" "))}&per_page=${PER_PAGE}`,
-      { headers: authHeaders() }
-    );
-
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    return (data.items || []).map((item: any) => ({
-      repo:
-        item.repository_url?.split("/").slice(-2).join("/") || "unknown",
-      mergedAt: item.pull_request?.merged_at || item.closed_at || "",
-    }));
-  } catch (error) {
-    console.error(`Error fetching other-repo PRs for ${username}:`, error);
-    return [];
+    if (!searchable.has(key)) searchable.set(key, { ...request, login });
   }
+
+  const queue = Array.from(searchable.values());
+  const chunks: (typeof queue)[] = [];
+  for (let i = 0; i < queue.length; i += GRAPHQL_SEARCH_BATCH) {
+    chunks.push(queue.slice(i, i + GRAPHQL_SEARCH_BATCH));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const fields = chunk
+        .map(({ login, excludeRepos }, index) => {
+          const qualifiers = [
+            `author:${login}`,
+            "is:pr",
+            "is:merged",
+            "is:public",
+            `merged:>=${sinceDate}`,
+            ...excludeRepos.filter(Boolean).map((repo) => `-repo:${repo}`),
+          ];
+          return (
+            `u${index}: search(query: ${JSON.stringify(qualifiers.join(" "))}, type: ISSUE, first: 100) ` +
+            `{ nodes { ... on PullRequest { mergedAt repository { nameWithOwner } } } }`
+          );
+        })
+        .join("\n");
+
+      try {
+        const response = await fetch(`${GITHUB_API}/graphql`, {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ query: `query {\n${fields}\n}` }),
+        });
+
+        const body = await response.json();
+        if (!response.ok || !body.data) {
+          throw new Error(
+            `GraphQL search failed: ${response.status} ${JSON.stringify(body.errors ?? body).slice(0, 200)}`
+          );
+        }
+
+        chunk.forEach(({ login }, index) => {
+          const search = body.data[`u${index}`];
+          // A failed alias stays out of the map so it reads as unknown
+          if (!search) return;
+
+          results.set(
+            login.toLowerCase(),
+            search.nodes
+              .filter((node: any) => node?.mergedAt)
+              .map((node: any) => ({
+                repo: node.repository?.nameWithOwner || "unknown",
+                mergedAt: node.mergedAt,
+              }))
+          );
+        });
+      } catch (error) {
+        console.error(`Batched PR search failed for ${chunk.length} users:`, error);
+      }
+    })
+  );
+
+  return results;
 }
 
 /**
@@ -750,7 +669,7 @@ export async function getUserCommitsSince(
 ): Promise<number> {
   try {
     const response = await fetch(
-      `https://api.github.com/repos/${org}/${repo}/commits?author=${username}&since=${since.toISOString()}&per_page=1`,
+      `${GITHUB_API}/repos/${org}/${repo}/commits?author=${username}&since=${since.toISOString()}&per_page=1`,
       { headers: authHeaders() }
     );
 
@@ -808,7 +727,7 @@ export interface ProjectOverview {
 /**
  * Gets repository metadata (stars, description, language, ...)
  */
-export async function getRepositorySummary(
+async function getRepositorySummary(
   owner: string,
   repo: string
 ): Promise<RepositorySummary | null> {
@@ -839,7 +758,7 @@ export async function getRepositorySummary(
 /**
  * Gets the most recent commits on a repository's default branch
  */
-export async function getRecentCommits(
+async function getRecentCommits(
   owner: string,
   repo: string,
   limit = 5
@@ -876,7 +795,7 @@ export async function getRecentCommits(
  * The issues endpoint returns both, distinguished by the pull_request field,
  * so one request covers both lists.
  */
-export async function getRecentIssuesAndPullRequests(
+async function getRecentIssuesAndPullRequests(
   owner: string,
   repo: string,
   limit = 50

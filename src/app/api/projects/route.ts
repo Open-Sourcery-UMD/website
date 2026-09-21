@@ -4,7 +4,6 @@ import { errorResponse, HttpError } from "@/lib/server/httpErrors";
 import {
   joinProject,
   leaveProject,
-  removeMember,
   withdrawProposal,
 } from "@/lib/server/memberActions";
 
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
   try {
     const uid = await requireUser(request);
     const body = await request.json().catch(() => ({}));
-    const { action, projectId, username } = body ?? {};
+    const { action, projectId } = body ?? {};
 
     switch (action) {
       case "join":
@@ -25,10 +24,6 @@ export async function POST(request: NextRequest) {
 
       case "leave":
         await leaveProject(uid, projectId);
-        break;
-
-      case "removeMember":
-        await removeMember(uid, projectId, username);
         break;
 
       case "withdrawProposal":
