@@ -1,6 +1,9 @@
 import { db } from "./lib/firebase-admin";
 import { sendEmail } from "../src/lib/emailService";
-import { getOrganizationRepositories } from "../src/lib/githubApi";
+import {
+  getOrganizationRepositories,
+  getRepositoryMembership,
+} from "../src/lib/githubApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 
@@ -15,21 +18,43 @@ async function notifyArchivedProjects(): Promise<number> {
     .where("status", "==", "ARCHIVED")
     .get();
 
+  const pendingProjects = archivedSnapshot.docs.filter(
+    (projectDoc) => !projectDoc.data().archiveNotificationSent
+  );
+  if (pendingProjects.length === 0) return 0;
+
+  // Developers on a project are whoever has access to its repository, matched
+  // back to accounts by GitHub username (stored as typed, so compare lowercased)
+  const usersSnapshot = await db.collection("users").get();
+
   let notified = 0;
 
-  for (const projectDoc of archivedSnapshot.docs) {
+  for (const projectDoc of pendingProjects) {
     const project = projectDoc.data();
 
-    // Already told this team - don't email them again on the next run
-    if (project.archiveNotificationSent) continue;
+    let members;
+    try {
+      members = await getRepositoryMembership(GITHUB_ORG, project.repositoryName);
+    } catch (error) {
+      // Leave it unflagged so the next run tries this team again
+      console.error(
+        `Couldn't read members of archived project "${project.projectName}"; will retry next run`,
+        error
+      );
+      continue;
+    }
 
-    // Developers on the project are the users whose currProject matches it
-    const membersSnapshot = await db
-      .collection("users")
-      .where("currProject", "==", project.projectName)
-      .get();
+    const memberLogins = new Set(
+      [...members.collaborators, ...members.pendingInvitees].map((login) =>
+        login.toLowerCase()
+      )
+    );
 
-    for (const memberDoc of membersSnapshot.docs) {
+    const memberDocs = usersSnapshot.docs.filter((userDoc) =>
+      memberLogins.has((userDoc.data().gitHubUsername || "").trim().toLowerCase())
+    );
+
+    for (const memberDoc of memberDocs) {
       const memberData = memberDoc.data();
       if (!memberData.email) continue;
 

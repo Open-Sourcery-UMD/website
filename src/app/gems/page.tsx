@@ -18,16 +18,21 @@ function getGemAmount(action: string): number {
   }
   if (lower.includes('opened') && lower.includes('issue')) return 30;
   if (lower.includes('merged') && lower.includes('pr')) {
-    if (lower.includes('pr into')) return 50;
-    return 30;
+    // gemService marks PRs in the developer's own project(s); everything
+    // else is a PR merged into an outside repository
+    return isOwnProjectPR(lower) ? 30 : 50;
   }
   return 0;
+}
+
+function isOwnProjectPR(lowerAction: string): boolean {
+  return lowerAction.includes('(your project)');
 }
 
 function getUnit(action: string): string {
   const lower = action.toLowerCase();
   if (lower.includes('opened') && lower.includes('issue')) return '/issue';
-  if (lower.includes('merged') && lower.includes('pr') && !(lower.includes('pr into'))) return '/PR';
+  if (lower.includes('merged') && lower.includes('pr') && isOwnProjectPR(lower)) return '/PR';
   return '';
 }
 

@@ -162,7 +162,6 @@ export default function SignUpPage() {
         graduationYear: formData.graduationYear,
         technologiesExperiencedWith: formData.technologiesExperiencedWith,
         preferredTopics: formData.preferredTopics,
-        currProject: "",
         eventsAttended: [],
         lastWarningTime: new Date(),
         hashedPassword,
@@ -185,8 +184,9 @@ export default function SignUpPage() {
       // Send email verification
       await sendEmailVerification(userCredential.user);
 
-      // Fire-and-forget org invite
-      inviteUserToOrganization(formData.gitHubUsername).catch((err) =>
+      // Fire-and-forget org invite. The server invites the GitHub account on
+      // the profile just created, identified by the new user's session.
+      inviteUserToOrganization().catch((err) =>
         console.error("Failed to send org invite:", err)
       );
 

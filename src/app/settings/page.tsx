@@ -7,8 +7,9 @@ import { auth } from "@firebaseConfig";
 import { useAuth } from "@context/AuthContext";
 import { updateUserProfile, resendVerificationEmail } from "@lib/userService";
 import { getGitHubUser } from "@lib/githubService";
-import { leaveProjectByName } from "@/lib/projectService";
-import { TECHNOLOGIES, TOPICS } from "@data";
+import { leaveProject, withdrawProposal } from "@/lib/projectService";
+import { useUserProjects } from "@hooks/useUserProjects";
+import { Project, TECHNOLOGIES, TOPICS } from "@data";
 import TextQuestion from "@components/forms/TextQuestion";
 import MultipleChoiceQuestion from "@components/forms/MultipleChoiceQuestion";
 import SelectMultipleQuestion from "@components/forms/SelectMultipleQuestion";
@@ -27,6 +28,7 @@ interface SettingsFormData {
 }
 
 const YEAR_OPTIONS = ["2025", "2026", "2027", "2028", "2029", "2030", "2031"];
+const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 const ALL_TECHNOLOGIES = TECHNOLOGIES.flatMap((g) => g.technologies);
 const ALL_TOPICS = TOPICS.flatMap((g) => g.topics).sort();
 
@@ -34,6 +36,14 @@ export default function SettingsPage() {
   const router = useRouter();
 
   const { firebaseUser, firestoreUser, setFirestoreUser, loading } = useAuth();
+  const {
+    projects: myProjects,
+    pendingProjectIds,
+    pendingProposals,
+    loading: loadingProjects,
+    incomplete: projectsIncomplete,
+    refresh: refreshProjects,
+  } = useUserProjects();
 
   const [formData, setFormData] = useState<SettingsFormData>({
     firstName: "",
@@ -49,7 +59,8 @@ export default function SettingsPage() {
     useState<SettingsFormData | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
-  const [leavingProject, setLeavingProject] = useState(false);
+  const [leavingProjectId, setLeavingProjectId] = useState<string | null>(null);
+  const [withdrawingProposalId, setWithdrawingProposalId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [resendingEmail, setResendingEmail] = useState(false);
@@ -126,6 +137,23 @@ export default function SettingsPage() {
       return;
     }
 
+    // Project membership follows the GitHub account, so a new username means
+    // no longer counting as a member of the current project(s)
+    const usernameChanged =
+      originalData &&
+      formData.gitHubUsername.trim().toLowerCase() !==
+        originalData.gitHubUsername.trim().toLowerCase();
+
+    if (usernameChanged && myProjects.length > 0) {
+      const projectNames = myProjects.map((project) => `"${project.projectName}"`).join(", ");
+      const confirmed = window.confirm(
+        `Your project membership is tied to your GitHub account. After changing your ` +
+          `GitHub username you will no longer count as a member of ${projectNames} ` +
+          `unless the new account also has access to its repository. Continue?`
+      );
+      if (!confirmed) return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -176,31 +204,33 @@ export default function SettingsPage() {
     router.push("/");
   };
 
-  const handleLeaveProject = async () => {
-    if (!firebaseUser?.uid || !firestoreUser?.currProject) return;
+  const handleLeaveProject = async (project: Project) => {
+    if (!firebaseUser?.uid) return;
 
     const confirmed = window.confirm(
-      `Are you sure you want to leave "${firestoreUser.currProject}"?`
+      `Are you sure you want to leave "${project.projectName}"? ` +
+        `This removes your access to its GitHub repository.`
     );
     if (!confirmed) return;
 
-    setLeavingProject(true);
+    setLeavingProjectId(project.id);
     setErrorMessage("");
 
     try {
-      await leaveProjectByName(
-        firebaseUser.uid,
-        firestoreUser.currProject
-      );
+      await leaveProject(project.id);
 
-      setFirestoreUser((prev) =>
-        prev ? { ...prev, currProject: "" } : prev
-      );
+      // Membership comes from GitHub, so re-read it rather than assuming
+      await refreshProjects({ fresh: true });
 
-      setSuccessMessage("You have left the project.");
+      const remaining = myProjects.filter((current) => current.id !== project.id);
+      setSuccessMessage(`You have left "${project.projectName}".`);
+
       setTimeout(() => {
         setSuccessMessage("");
-        router.push("/");
+        // Stay put if there are other projects left to manage here
+        if (remaining.length === 0) {
+          router.push("/");
+        }
       }, 1000);
     } catch (error) {
       console.error("Error leaving project:", error);
@@ -210,7 +240,33 @@ export default function SettingsPage() {
           : "Failed to leave project."
       );
     } finally {
-      setLeavingProject(false);
+      setLeavingProjectId(null);
+    }
+  };
+
+  const handleWithdrawProposal = async (proposal: Project) => {
+    const confirmed = window.confirm(
+      `Withdraw your proposal for "${proposal.projectName}"? The board will be ` +
+        `notified, and you'll be free to join an existing project instead.`
+    );
+    if (!confirmed) return;
+
+    setWithdrawingProposalId(proposal.id);
+    setErrorMessage("");
+
+    try {
+      await withdrawProposal(proposal.id);
+      await refreshProjects();
+
+      setSuccessMessage(`Your proposal for "${proposal.projectName}" has been withdrawn.`);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error) {
+      console.error("Error withdrawing proposal:", error);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to withdraw proposal."
+      );
+    } finally {
+      setWithdrawingProposalId(null);
     }
   };
 
@@ -429,25 +485,91 @@ export default function SettingsPage() {
 
         {/* Current Project Section */}
         <div className="bg-white rounded-xl p-6 mb-8 shadow-sm border border-gray-100">
-          <h2 className="text-2xl font-semibold text-black mb-6">Current Project</h2>
+          <h2 className="text-2xl font-semibold text-black mb-6">
+            {myProjects.length > 1 ? "Current Projects" : "Current Project"}
+          </h2>
 
-          {firestoreUser?.currProject ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-medium text-black">{firestoreUser.currProject}</p>
-                <p className="text-sm text-gray-500">You are currently a member of this project.</p>
-              </div>
-              <button
-                onClick={handleLeaveProject}
-                disabled={leavingProject}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity font-medium"
-              >
-                {leavingProject ? "Leaving..." : "Leave Project"}
-              </button>
+          {!loadingProjects && pendingProposals.length > 0 && (
+            <div className="space-y-5 mb-5">
+              {pendingProposals.map((proposal) => (
+                <div key={proposal.id} className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-lg font-medium text-black">{proposal.projectName}</p>
+                    <p className="text-sm text-gray-500">
+                      Your proposal is awaiting review by the board. You can&apos;t join another
+                      project while it&apos;s pending.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleWithdrawProposal(proposal)}
+                    disabled={withdrawingProposalId !== null}
+                    className="shrink-0 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity font-medium"
+                  >
+                    {withdrawingProposalId === proposal.id ? "Withdrawing..." : "Withdraw Proposal"}
+                  </button>
+                </div>
+              ))}
             </div>
-          ) : (
-            <p className="text-gray-500">No current project. Visit the Team Matching Portal to join one.</p>
           )}
+
+          {loadingProjects ? (
+            <p className="text-gray-500">Checking your project membership...</p>
+          ) : myProjects.length > 0 ? (
+            <div className="space-y-5">
+              {myProjects.length > 1 && (
+                <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  Your GitHub account has access to more than one project&apos;s repository, so
+                  you&apos;re a member of each. You can only join one project through this site
+                  &mdash; leave any you&apos;re no longer working on.
+                </p>
+              )}
+
+              {myProjects.map((project) => {
+                const pending = pendingProjectIds.has(project.id);
+
+                return (
+                  <div key={project.id} className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-lg font-medium text-black">{project.projectName}</p>
+                      <p className="text-sm text-gray-500">
+                        {project.status === "ARCHIVED" ? (
+                          "This project has been archived. You can leave it to join another."
+                        ) : pending ? (
+                          <>
+                            Your invitation is pending &mdash;{" "}
+                            <a
+                              href={`https://github.com/${GITHUB_ORG}/${project.repositoryName}/invitations`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-ycs-blue underline"
+                            >
+                              accept it on GitHub
+                            </a>{" "}
+                            to start contributing.
+                          </>
+                        ) : (
+                          "You are currently a member of this project."
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleLeaveProject(project)}
+                      disabled={leavingProjectId !== null}
+                      className="shrink-0 px-4 py-2 bg-red-500 text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity font-medium"
+                    >
+                      {leavingProjectId === project.id ? "Leaving..." : "Leave Project"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : projectsIncomplete ? (
+            <p className="text-gray-500">
+              We couldn&apos;t check your project membership with GitHub right now. Please try again later.
+            </p>
+          ) : pendingProposals.length === 0 ? (
+            <p className="text-gray-500">No current project. Visit the Team Matching Portal to join one.</p>
+          ) : null}
         </div>
 
         {/* Action Buttons */}

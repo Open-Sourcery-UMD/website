@@ -1,44 +1,20 @@
 'use client';
 
 import { db } from '@/firebaseConfig';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc } from 'firebase/firestore';
 import { User } from '@/types/users';
 import { getUserRepositoryActivity, getMergedPRsInOtherRepos } from './githubService';
+import {
+  getProjectsForUser,
+  loadProjectMembership,
+  ProjectMembership,
+} from './projectService';
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || 'Open-Sourcery-UMD';
 
 interface GemBreakdown {
   totalGems: number;
   actions: string[];
-}
-
-/**
- * Resolves the GitHub repository backing a user's current project.
- *
- * Prefers the repositoryName stored on the project so renamed repos still
- * resolve, falling back to deriving it from the project name.
- */
-async function getCurrentProjectRepository(
-  projectName: string
-): Promise<string | null> {
-  if (!projectName) return null;
-
-  const derived = projectName
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-
-  try {
-    const projectsRef = collection(db, 'projects');
-    const snapshot = await getDocs(
-      query(projectsRef, where('projectName', '==', projectName))
-    );
-    const stored = snapshot.docs[0]?.data()?.repositoryName;
-    return stored || derived;
-  } catch (error) {
-    console.error(`Error resolving repository for project ${projectName}:`, error);
-    return derived;
-  }
 }
 
 /**
@@ -50,7 +26,12 @@ async function getCurrentProjectRepository(
  * - 30 gems per PR merged in current project
  * - 50 gems per PR merged in other public repos
  */
-export async function computeGemCount(uid: string, startDate: Date): Promise<GemBreakdown> {
+export async function computeGemCount(
+  uid: string,
+  startDate: Date,
+  // Pass a shared snapshot when computing gems for many users at once
+  membership?: ProjectMembership
+): Promise<GemBreakdown> {
   try {
     let totalGems = 0;
     const actions: string[] = [];
@@ -100,15 +81,24 @@ export async function computeGemCount(uid: string, startDate: Date): Promise<Gem
 
     // Calculate gems from GitHub activity
     if (userData.gitHubUsername) {
-      const repositoryName = await getCurrentProjectRepository(userData.currProject);
-      const fullRepo = repositoryName ? `${GITHUB_ORG}/${repositoryName}` : '';
+      // Every project whose repository the developer has access to - usually
+      // one, but they earn gems in each if GitHub puts them on several
+      let projectRepos: string[] = [];
+      try {
+        const snapshot = membership ?? (await loadProjectMembership());
+        projectRepos = getProjectsForUser(snapshot, userData.gitHubUsername)
+          .map((project) => project.repositoryName)
+          .filter(Boolean);
+      } catch (error) {
+        console.error(`Error resolving projects for ${userData.gitHubUsername}:`, error);
+      }
 
-      // Issues and PRs in the developer's own project
-      if (fullRepo) {
+      // Issues and PRs in the developer's own project(s)
+      for (const repositoryName of projectRepos) {
         try {
           const activity = await getUserRepositoryActivity(
             userData.gitHubUsername,
-            fullRepo,
+            `${GITHUB_ORG}/${repositoryName}`,
             startDate
           );
 
@@ -119,23 +109,24 @@ export async function computeGemCount(uid: string, startDate: Date): Promise<Gem
             );
           }
 
+          // The gems page reads "(your project)" to price this line at 30/PR
           if (activity.mergedPRs > 0) {
             totalGems += activity.mergedPRs * 30;
             actions.push(
-              `Merged ${activity.mergedPRs} PR${activity.mergedPRs !== 1 ? 's' : ''} into '${repositoryName}' (your current project)`
+              `Merged ${activity.mergedPRs} PR${activity.mergedPRs !== 1 ? 's' : ''} into '${repositoryName}' (your project)`
             );
           }
         } catch (error) {
-          console.error(`Error fetching activity for current project ${userData.currProject}:`, error);
+          console.error(`Error fetching activity for project repository ${repositoryName}:`, error);
         }
       }
 
       // PRs merged in other public repositories count whether or not the
-      // developer is currently on a project
+      // developer is on a project; their own projects are excluded above
       try {
         const otherPRs = await getMergedPRsInOtherRepos(
           userData.gitHubUsername,
-          fullRepo,
+          projectRepos.map((repositoryName) => `${GITHUB_ORG}/${repositoryName}`),
           startDate
         );
 

@@ -25,14 +25,39 @@ export const formatYearRange = (min: number, max: number) => {
   return `${YEAR_LABELS[min]} – ${YEAR_LABELS[max]}`;
 };
 
+/**
+ * The viewer's relationship to a project, as far as joining it goes:
+ * - none:        not on any project, free to join
+ * - this:        already on this project
+ * - other:       already on a different project
+ * - proposal:    has a proposal awaiting review, which blocks joining
+ * - checking:    membership still loading
+ * - unavailable: membership couldn't be verified, so joining is blocked
+ */
+export type CardMembership =
+  | 'none'
+  | 'this'
+  | 'other'
+  | 'proposal'
+  | 'checking'
+  | 'unavailable';
+
 interface ProjectCardProps {
   project: Project;
   onJoin?: (project: Project) => void;
-  joinDisabled?: boolean;
+  membership?: CardMembership;
+  /** Disables the button without changing its label, e.g. while another join runs */
+  joinLocked?: boolean;
   joining?: boolean;
 }
 
-export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectCardProps) => {
+export const ProjectCard = ({
+  project,
+  onJoin,
+  membership = 'none',
+  joinLocked = false,
+  joining,
+}: ProjectCardProps) => {
   const { data } = useTeamMatching();
 
   const userYear = data.year;
@@ -56,27 +81,42 @@ export const ProjectCard = ({ project, onJoin, joinDisabled, joining }: ProjectC
     userYear !== null && Number(userYear) >= minGradYear && Number(userYear) <= maxGradYear;
 
   const spotsRemaining = project.maxTeamSize - project.currentTeamSize;
+  const isMember = membership === 'this';
   const isFullOrDisabled =
     spotsRemaining <= 0 ||
     !isYearMatch ||
-    joinDisabled;
+    membership !== 'none' ||
+    joinLocked;
 
   const otherTechnologies = project.technologiesUsed.filter(
     (t) => !project.technologiesRequired.includes(t)
   );
 
+  // Membership outranks capacity: "you're on this" matters more than "it's full"
   const buttonLabel = joining
     ? 'Joining...'
-    : joinDisabled
-      ? 'Already in a project'
-      : spotsRemaining <= 0
-        ? 'Full'
-        : !isYearMatch
-          ? 'Out of year range'
-            : 'Join';
+    : membership === 'this'
+      ? 'Already on this project'
+      : membership === 'other'
+        ? 'Already on a project'
+        : membership === 'proposal'
+          ? 'Proposal pending'
+          : membership === 'checking'
+            ? 'Checking...'
+            : membership === 'unavailable'
+              ? 'Unavailable'
+              : spotsRemaining <= 0
+                ? 'Full'
+                : !isYearMatch
+                  ? 'Out of year range'
+                  : 'Join';
 
   return (
-    <div className={`relative ${spotsRemaining <= 0 && 'opacity-60'} bg-neutral-900 border border-neutral-700 rounded-xl p-6 flex flex-col`}>
+    <div
+      className={`relative ${spotsRemaining <= 0 && !isMember ? 'opacity-60' : ''} bg-neutral-900 border ${
+        isMember ? 'border-ycs-pink' : 'border-neutral-700'
+      } rounded-xl p-6 flex flex-col`}
+    >
       <a
         href={`https://github.com/${GITHUB_ORG}/${project.repositoryName}`}
         target="_blank"

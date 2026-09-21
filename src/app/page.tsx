@@ -8,9 +8,12 @@ import Link from 'next/link';
 import { TitleSubtitle } from '@components/TitleSubtitle';
 import { GradientBox } from '@components/GradientBox';
 import EventsCalendar from '@components/EventsCalendar';
+import ProjectDashboard from '@components/project/ProjectDashboard';
 import Image from 'next/image';
+import { useAuth } from '@context/AuthContext';
 
 const Home = () => {
+  const { firestoreUser } = useAuth();
   const openSourceryProjectsLink = 'https://github.com/open-sourcery-umd';
   const umdLink = 'https://umd.edu/';
 
@@ -138,6 +141,8 @@ const Home = () => {
           />
         </div>
       </SectionContainer>
+
+      {firestoreUser && <ProjectDashboard />}
     </PageContainer>
   );
 };

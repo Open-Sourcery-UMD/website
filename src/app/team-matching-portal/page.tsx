@@ -1,65 +1,96 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PageContainer, SectionContainer } from '@components/Container';
 import { Project } from '@data';
-import { ProjectCard } from '@components/ProjectCard';
+import { CardMembership, ProjectCard } from '@components/ProjectCard';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@context/AuthContext';
+import { useUserProjects } from '@hooks/useUserProjects';
 import { getFirestoreProjects, joinProject } from '@/lib/projectService';
 import VerificationGate from '@components/VerificationGate';
 
+function sortBySpotsRemaining(projects: Project[]): Project[] {
+  return [...projects].sort((projA, projB) => {
+    const projASpotsRemaining = projA.maxTeamSize - projA.currentTeamSize;
+    const projBSpotsRemaining = projB.maxTeamSize - projB.currentTeamSize;
+    return projBSpotsRemaining - projASpotsRemaining;
+  });
+}
+
 export default function TeamMatchingPortalPage() {
   const router = useRouter();
-  const { firebaseUser, firestoreUser, loading } = useAuth();
+  const { firebaseUser, loading } = useAuth();
+  const {
+    projects: myProjects,
+    pendingProposals,
+    loading: loadingMembership,
+    incomplete: membershipIncomplete,
+    refresh: refreshMembership,
+  } = useUserProjects();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [error, setError] = useState('');
   const [joiningProjectId, setJoiningProjectId] = useState<string | null>(null);
-  const [joinDisabled, setJoinDisabled] = useState(!!firestoreUser?.currProject);
 
   // Redirect unauthenticated users to login
+  useEffect(() => {
+    if (!loading && !firebaseUser) {
+      router.push('/log-in');
+    }
+  }, [loading, firebaseUser, router]);
+
+  const loadProjects = useCallback(async () => {
+    try {
+      const data = await getFirestoreProjects();
+      setProjects(sortBySpotsRemaining(data));
+    } catch (err) {
+      console.error('Error fetching projects:', err);
+      setError('Failed to load projects.');
+    } finally {
+      setLoadingProjects(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
+
   if (!loading && !firebaseUser) {
-    router.push('/log-in');
     return null;
   }
 
-  useEffect(() => {
-    async function fetchProjects() {
-      try {
-        const data = await getFirestoreProjects();
-        setProjects(data.sort((projA, projB) => {
-          const projASpotsRemaining = projA.maxTeamSize - projA.currentTeamSize;
-          const projBSpotsRemaining = projB.maxTeamSize - projB.currentTeamSize;
-          return projBSpotsRemaining - projASpotsRemaining;
-        }));
-      } catch (err) {
-        console.error('Error fetching projects:', err);
-        setError('Failed to load projects.');
-      } finally {
-        setLoadingProjects(false);
-      }
-    }
-    fetchProjects();
-  }, []);
+  const myProjectIds = new Set(myProjects.map((project) => project.id));
+
+  const membershipFor = (project: Project): CardMembership => {
+    if (loadingMembership) return 'checking';
+    if (myProjectIds.has(project.id)) return 'this';
+    if (myProjects.length > 0) return 'other';
+    // A proposal awaiting review is a commitment to lead that project
+    if (pendingProposals.length > 0) return 'proposal';
+    // Couldn't rule out that they're already committed - don't allow a join
+    if (membershipIncomplete) return 'unavailable';
+    return 'none';
+  };
 
   const handleJoin = async (project: Project) => {
-    if (!firebaseUser?.uid || !firestoreUser?.gitHubUsername) return;
+    if (!firebaseUser?.uid) return;
 
     setJoiningProjectId(project.id);
     setError('');
-    setJoinDisabled(true);
 
     try {
-      await joinProject(firebaseUser.uid, project.id, firestoreUser.discordUsername, firestoreUser.gitHubUsername);
-      // Refresh projects list
-      const updated = await getFirestoreProjects();
-      setProjects(updated);
+      // The server re-checks every rule before sending the invitation
+      await joinProject(project.id);
+      // Joining changes both membership and team sizes
+      await Promise.all([refreshMembership({ fresh: true }), loadProjects()]);
     } catch (err) {
       console.error('Error joining project:', err);
-      setJoinDisabled(false);
       setError(err instanceof Error ? err.message : 'Failed to join project.');
+      // A refused join can mean this page's view of membership was stale
+      refreshMembership({ fresh: true });
     } finally {
       setJoiningProjectId(null);
     }
@@ -83,6 +114,28 @@ export default function TeamMatchingPortalPage() {
             </div>
           )}
 
+          {!loadingMembership && myProjects.length === 0 && pendingProposals.length > 0 && (
+            <div className="mb-6 p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
+              Your proposal &apos;{pendingProposals[0].projectName}&apos; is awaiting review, so you
+              can&apos;t join another project while it&apos;s pending. If you&apos;d rather join an
+              existing team, you can withdraw it in{' '}
+              <Link href="/settings" className="underline font-medium">
+                Settings
+              </Link>
+              .
+            </div>
+          )}
+
+          {!loadingMembership &&
+            membershipIncomplete &&
+            myProjects.length === 0 &&
+            pendingProposals.length === 0 && (
+            <div className="mb-6 p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
+              We couldn&apos;t verify your current project membership with GitHub, so joining is
+              temporarily unavailable. Please refresh the page in a moment.
+            </div>
+          )}
+
           {loadingProjects ? (
             <p className="text-neutral-400">Loading projects...</p>
           ) : projects.length === 0 ? (
@@ -94,7 +147,8 @@ export default function TeamMatchingPortalPage() {
                   key={project.id}
                   project={project}
                   onJoin={handleJoin}
-                  joinDisabled={!!firestoreUser?.currProject || joinDisabled}
+                  membership={membershipFor(project)}
+                  joinLocked={joiningProjectId !== null}
                   joining={joiningProjectId === project.id}
                 />
               ))}

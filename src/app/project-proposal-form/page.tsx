@@ -12,6 +12,7 @@ import SliderQuestion from '@components/forms/SliderQuestion';
 import SelectMultipleQuestion from '@components/forms/SelectMultipleQuestion';
 import SearchSelectQuestion from '@components/forms/SearchSelectQuestion';
 import { createProjectProposal } from '@/lib/projectService';
+import { useUserProjects } from '@hooks/useUserProjects';
 import MultipleChoiceQuestion from '@components/forms/MultipleChoiceQuestion';
 import VerificationGate from '@components/VerificationGate';
 
@@ -34,6 +35,11 @@ const SECTION_LABELS = ['Project Info', 'Team Settings', 'Technologies & Topics'
 const ProjectProposalPage = () => {
   const router = useRouter();
   const { firebaseUser, firestoreUser, loading } = useAuth();
+  const {
+    projects: myProjects,
+    pendingProposals,
+    loading: loadingProjects,
+  } = useUserProjects();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [errorMessage, setErrorMessage] = useState('');
@@ -67,15 +73,35 @@ const ProjectProposalPage = () => {
     []
   );
 
-  if (loading || !firebaseUser || !firestoreUser) {
+  if (loading || !firebaseUser || !firestoreUser || loadingProjects) {
     return null;
   }
 
-  if (firestoreUser.currProject !== '') {
+  // One proposal at a time: a pending one is already a commitment to lead
+  if (pendingProposals.length > 0) {
     return (
       <div className="flex flex-col items-center text-center justify-center px-10">
         <h1 className='mt-20 text-2xl'>
-          You're already on the '{firestoreUser.currProject}' project!
+          Your proposal &apos;{pendingProposals[0].projectName}&apos; is already awaiting review!
+        </h1>
+        <h2 className='mb-40 text-gray-300'>
+          You can withdraw it from your Settings page if you&apos;d like to propose something else.
+        </h2>
+      </div>
+    );
+  }
+
+  if (myProjects.length > 0) {
+    const projectNames = myProjects.map((project) => `'${project.projectName}'`);
+    const projectList =
+      projectNames.length === 1
+        ? projectNames[0]
+        : `${projectNames.slice(0, -1).join(', ')} and ${projectNames[projectNames.length - 1]}`;
+
+    return (
+      <div className="flex flex-col items-center text-center justify-center px-10">
+        <h1 className='mt-20 text-2xl'>
+          You're already on the {projectList} project{myProjects.length > 1 ? 's' : ''}!
         </h1>
         <h2 className='mb-40 text-gray-300'>
           You can only be a Developer on one project at a time.
@@ -171,7 +197,7 @@ const ProjectProposalPage = () => {
           Max. Team Size: ${maxTeamSize}
 
           If this project seems reasonable, please complete the following steps:
-            1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics, and the Apache-2.0 license.
+            1. Create a GitHub repository under the UMD Open Sourcery GitHub organization with the provided project name, description, and topics, and the Apache-2.0 license. Make sure to do this from the umdopensourcery@gmail.com GitHub account.
             2. Ensure @${firestoreUser.gitHubUsername} has been granted write access to the UMD Open Sourcery GitHub organization, and grant them admin access to their new repository.
             3. Email ${firebaseUser.email} to inform them that their project's repository has been created, and to schedule an onboarding meeting.
             4. Update @${firestoreUser.discordUsername}'s Discord roles to include "Lead Developer" and "Developer".

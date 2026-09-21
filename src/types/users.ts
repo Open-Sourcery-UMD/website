@@ -9,7 +9,6 @@ export interface User {
   graduationYear: string;
   technologiesExperiencedWith: string[];
   preferredTopics: string[];
-  currProject: string;
   eventsAttended: CalendarEvent[];
   lastWarningTime: Date;
   emailVerified?: boolean;

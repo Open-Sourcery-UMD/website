@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/firebaseConfig';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { computeGemCount } from '@/lib/gemService';
+import { loadProjectMembership, ProjectMembership } from '@/lib/projectService';
 import { BOARD_MEMBERS, getSemesterStart } from '@data';
 
 interface LeaderboardUser {
@@ -21,10 +22,18 @@ export default function GemLeaderboard() {
   useEffect(() => {
     async function fetchLeaderboard() {
       try {
-        // Query all verified users
+        // Query all verified users, and work out who is on which project once
+        // rather than once per user
         const usersRef = collection(db, 'users');
         const q = query(usersRef);
-        const querySnapshot = await getDocs(q);
+        const [querySnapshot, membership] = await Promise.all([
+          getDocs(q),
+          loadProjectMembership().catch((err): ProjectMembership => {
+            console.error('Error loading project membership:', err);
+            // Still rank on events and outside PRs rather than retrying per user
+            return { projects: [], membership: {}, failedRepos: [] };
+          }),
+        ]);
 
         // Compute gem counts for all users in parallel
         const semesterStart = getSemesterStart();
@@ -32,7 +41,7 @@ export default function GemLeaderboard() {
         const userPromises = querySnapshot.docs.map(async (doc) => {
           const userData = doc.data();
           try {
-            const breakdown = await computeGemCount(doc.id, semesterStart);
+            const breakdown = await computeGemCount(doc.id, semesterStart, membership);
             return {
               uid: doc.id,
               firstName: userData.firstName || 'Unknown',

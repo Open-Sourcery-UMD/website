@@ -1,7 +1,10 @@
 /**
  * Client-side GitHub service.
  * All operations go through /api/github which handles authentication server-side.
+ * Joining and leaving projects live in projectService (/api/projects).
  */
+
+import { authorizedFetch, postAuthorized } from './apiClient';
 
 /**
  * Validates if a GitHub username exists
@@ -21,21 +24,11 @@ export async function getGitHubUser(username: string): Promise<boolean> {
 }
 
 /**
- * Sends membership invite to GitHub organization
+ * Invites the signed-in user's own GitHub account (from their profile) to the
+ * GitHub organization
  */
-export async function inviteUserToOrganization(
-  username: string
-): Promise<void> {
-  const response = await fetch("/api/github", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "inviteOrg", username }),
-  });
-
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || "Failed to invite user to organization");
-  }
+export async function inviteUserToOrganization(): Promise<void> {
+  await postAuthorized("/api/github", { action: "inviteOrg" });
 }
 
 /**
@@ -48,24 +41,6 @@ export async function getOrganizationRepositories(): Promise<string[]> {
     return await response.json();
   } catch (error) {
     console.error("Error fetching organization repositories:", error);
-    return [];
-  }
-}
-
-/**
- * Gets list of GitHub users who have write access to a repository
- */
-export async function getRepositoryTeamMembers(
-  repo: string
-): Promise<string[]> {
-  try {
-    const response = await fetch(
-      `/api/github?repo=${encodeURIComponent(repo)}`
-    );
-    if (!response.ok) return [];
-    return await response.json();
-  } catch (error) {
-    console.error(`Error fetching team members for ${repo}:`, error);
     return [];
   }
 }
@@ -97,21 +72,49 @@ export async function getEffectiveRepoUserCount(repo: string): Promise<{
 }
 
 /**
- * Sends write-access invite to a specific repository
+ * Who is on a project, according to its repository: direct collaborators plus
+ * anyone with a pending invitation. See getRepositoryMembership in githubApi.
  */
-export async function inviteUserToRepository(
-  username: string,
-  repo: string
-): Promise<void> {
-  const response = await fetch("/api/github", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "inviteRepo", username, repo }),
-  });
+export interface RepositoryMembership {
+  collaborators: string[];
+  pendingInvitees: string[];
+}
 
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || "Failed to invite user to repository");
+export interface RepositoryMembershipMap {
+  membership: Record<string, RepositoryMembership>;
+  /** Repositories whose membership couldn't be determined */
+  failed: string[];
+}
+
+/**
+ * Gets the membership of several repositories at once.
+ *
+ * Pass `fresh` to bypass the server's short-lived cache when a stale answer
+ * would be unsafe (e.g. checking whether someone may join a project).
+ */
+export async function getRepositoryMembershipMap(
+  repos: string[],
+  options: { fresh?: boolean } = {}
+): Promise<RepositoryMembershipMap> {
+  const uniqueRepos = Array.from(new Set(repos.filter(Boolean)));
+  if (uniqueRepos.length === 0) return { membership: {}, failed: [] };
+
+  try {
+    const params = new URLSearchParams({
+      action: "repoMembership",
+      repos: uniqueRepos.join(","),
+    });
+    if (options.fresh) params.set("fresh", "1");
+
+    // Signed in, `fresh` is honored; anonymously the server ignores it
+    const response = await authorizedFetch(`/api/github?${params}`);
+    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching repository membership:", error);
+    // Nothing could be verified - report every repository as unknown rather
+    // than empty, so callers never mistake an outage for "not a member"
+    return { membership: {}, failed: uniqueRepos };
   }
 }
 
@@ -143,18 +146,18 @@ export async function getUserRepositoryActivity(
 }
 
 /**
- * Gets merged PRs by user in public repos other than the specified one since a date
+ * Gets merged PRs by user in public repos other than the specified ones since a date
  */
 export async function getMergedPRsInOtherRepos(
   username: string,
-  excludeRepo: string,
+  excludeRepos: string[],
   since: Date
 ): Promise<{ repo: string; mergedAt: string }[]> {
   try {
     const params = new URLSearchParams({
       action: "otherPRs",
       username,
-      excludeRepo,
+      excludeRepos: excludeRepos.filter(Boolean).join(","),
       since: since.toISOString(),
     });
     const response = await fetch(`/api/github?${params}`);
@@ -163,5 +166,67 @@ export async function getMergedPRsInOtherRepos(
   } catch (error) {
     console.error(`Error fetching other-repo PRs for ${username}:`, error);
     return [];
+  }
+}
+
+export interface RepositorySummary {
+  name: string;
+  fullName: string;
+  url: string;
+  description: string | null;
+  stars: number;
+  forks: number;
+  language: string | null;
+  pushedAt: string | null;
+}
+
+export interface CommitSummary {
+  sha: string;
+  message: string;
+  authorName: string;
+  authorLogin: string | null;
+  date: string;
+  url: string;
+}
+
+export interface ActivityItem {
+  number: number;
+  title: string;
+  url: string;
+  authorLogin: string;
+  state: "open" | "closed";
+  merged: boolean;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export interface ProjectOverview {
+  repository: RepositorySummary | null;
+  commits: CommitSummary[];
+  pullRequests: ActivityItem[];
+  issues: ActivityItem[];
+}
+
+const EMPTY_OVERVIEW: ProjectOverview = {
+  repository: null,
+  commits: [],
+  pullRequests: [],
+  issues: [],
+};
+
+/**
+ * Gets repository details, recent commits and recent issues/PRs for a project
+ */
+export async function getProjectOverview(
+  repo: string
+): Promise<ProjectOverview> {
+  try {
+    const params = new URLSearchParams({ action: "projectOverview", repo });
+    const response = await fetch(`/api/github?${params}`);
+    if (!response.ok) return EMPTY_OVERVIEW;
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching project overview for ${repo}:`, error);
+    return EMPTY_OVERVIEW;
   }
 }
