@@ -23,7 +23,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({
 
   if (isConfirmation) {
     return (
-      <div className="w-full flex justify-center px-4 mt-8">
+      <div className="w-full flex justify-center">
         <div className="w-full max-w-4xl bg-white rounded-tr-2xl rounded-tl-2xl shadow-xl p-10">
           {confirmationPage}
         </div>
@@ -35,7 +35,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({
     sectionLabels[currPage - 1] || "";
 
   return (
-    <div className={`w-full flex justify-center px-4 ${compact ? "" : "mt-8"}`}>
+    <div className="w-full flex justify-center">
       <div
         className={`w-full max-w-4xl bg-white rounded-tr-2xl rounded-tl-2xl shadow-[0_0_10px_0_white] ${
           compact ? "px-6 pt-6 pb-1 sm:px-8 sm:pt-8" : "p-8 md:p-10"

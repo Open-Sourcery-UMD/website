@@ -260,6 +260,48 @@
   }
 
   /*
+   * A frame for the account and proposal forms: a border in the home page
+   * title's blues that slowly shimmers, with a soft blue glow behind it. The border is a masked pseudo-element so it can be a gradient and
+   * still follow the rounded corners; the glow sits underneath the cards.
+   */
+  .y2k-frame {
+    position: relative;
+    border-radius: 1rem;
+    isolation: isolate;
+  }
+
+  .y2k-frame::before,
+  .y2k-frame::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: calc(1rem + 2px);
+    pointer-events: none;
+  }
+
+  .y2k-frame::before {
+    padding: 2px;
+    /* The same light-to-dark sweep as .text-spell-gradient */
+    background: linear-gradient(100deg, #98f0ff 0%, #439edb 50%, #98f0ff 100%);
+    background-size: 240% 100%;
+    animation: holo-shift 9s linear infinite;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: 1;
+  }
+
+  .y2k-frame::after {
+    z-index: -1;
+    box-shadow:
+      0 0 16px 1px rgba(152, 240, 255, 0.55),
+      0 0 34px 6px rgba(67, 158, 219, 0.35),
+      0 0 80px 4px rgba(67, 158, 219, 0.25);
+  }
+
+  /*
    * A glossy metal disc. The metal arrives as --metal (a radial gradient) and
    * --glow; the ::after is the curved highlight that makes it read as a bead
    * of chrome rather than a flat circle.

@@ -121,7 +121,7 @@ export default function LoginPage() {
   if (resetMode) {
     return (
       <div className="w-full flex justify-center px-4 py-12">
-        <div className="w-full max-w-md flex flex-col">
+        <div className="y2k-frame w-full max-w-md flex flex-col">
           <FormHeader
             title="Reset Your Password"
             confirmationPage={false}
@@ -182,7 +182,7 @@ export default function LoginPage() {
 
   return (
     <div className="w-full flex justify-center px-4 py-12">
-      <div className="w-full max-w-md flex flex-col">
+      <div className="y2k-frame w-full max-w-md flex flex-col">
         <FormHeader
           title="Log In to Your Account"
           confirmationPage={false}

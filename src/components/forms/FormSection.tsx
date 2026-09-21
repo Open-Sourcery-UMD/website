@@ -21,7 +21,7 @@ const FormSection: React.FC<FormSectionProps> = ({
   const hasSubmit = submitText && submitText.trim().length > 0;
 
   return (
-    <div className="w-full flex justify-center px-4">
+    <div className="w-full flex justify-center">
       <div
         className={`w-full max-w-4xl bg-white rounded-br-2xl rounded-bl-2xl shadow-[0_0_10px_0_white] ${
           compact ? "px-6 pt-5 pb-6 sm:px-8 sm:pb-8" : "p-10"

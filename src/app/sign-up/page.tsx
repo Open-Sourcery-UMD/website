@@ -205,7 +205,7 @@ export default function SignUpPage() {
 
   return (
     <div className="w-full flex justify-center px-4 py-12">
-      <div className="w-full max-w-2xl flex flex-col">
+      <div className="y2k-frame mt-8 w-full max-w-2xl flex flex-col">
         <FormHeader
           title="Create Your Account"
           confirmationPage={currentPage === 3}
@@ -346,7 +346,7 @@ export default function SignUpPage() {
 
         {/* Page 4: Confirmation */}
         {currentPage === 3 && (
-          <div className="w-full flex justify-center px-4">
+          <div className="w-full flex justify-center">
             <div className="w-full max-w-2xl bg-white rounded-br-2xl rounded-bl-2xl shadow-[0_0_10px_0_white] p-10 text-center">
               <h2 className="text-3xl font-semibold text-ycs-blue mb-4">
                 Welcome, {formData.firstName}!
