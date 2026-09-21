@@ -1,6 +1,7 @@
 import { formatYearRange, getClassStanding, Project } from '@data';
 import { useTeamMatching } from '@context/TeamMatchingContext';
 import { ProjectLead } from '@/lib/projectService';
+import { getProjectTheme } from '@/lib/technologyTheme';
 import { FaDiscord, FaEnvelope, FaGithub } from 'react-icons/fa';
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
@@ -64,6 +65,10 @@ export const ProjectCard = ({
     (t) => !project.technologiesRequired.includes(t)
   );
 
+  // Cards are themed after their main technology - the highest TECHNOLOGIES
+  // section they touch, preferring required entries within it
+  const theme = getProjectTheme(project);
+
   const leadInitials = (lead?.name || '')
     .split(/\s+/)
     .filter(Boolean)
@@ -95,8 +100,16 @@ export const ProjectCard = ({
   return (
     <div
       className={`relative ${spotsRemaining <= 0 && !isMember ? 'opacity-60' : ''} bg-neutral-900 border ${
-        isMember ? 'border-ycs-pink' : 'border-neutral-700'
+        isMember ? 'border-ycs-pink' : ''
       } rounded-xl p-6 flex flex-col`}
+      style={{
+        // The pink border marks the viewer's own project, so the theme gives
+        // way to it there; 59 and 14 are ~35% and ~8% alpha
+        ...(isMember
+          ? {}
+          : { borderColor: `${theme.accent}59`, borderTopColor: theme.accent, borderTopWidth: 3 }),
+        backgroundImage: `linear-gradient(180deg, ${theme.accent}14, transparent 45%)`,
+      }}
     >
       <a
         href={`https://github.com/${GITHUB_ORG}/${project.repositoryName}`}
@@ -125,6 +138,19 @@ export const ProjectCard = ({
       <h2 className="text-2xl font-semibold text-white mb-2">
         {project.projectName}
       </h2>
+
+      {theme.technology && (
+        <span
+          className="inline-flex self-start items-center gap-1.5 px-2.5 py-1 mb-3 rounded-full text-xs font-medium"
+          style={{ backgroundColor: `${theme.accent}1f`, color: theme.text }}
+        >
+          <span
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: theme.accent }}
+          />
+          {theme.technology}
+        </span>
+      )}
 
       <p className="text-neutral-400 mb-6">
         {project.description}
