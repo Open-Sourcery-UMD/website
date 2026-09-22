@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth } from "@firebaseConfig";
-import { createUserProfile } from "@lib/userService";
+import { checkDiscordMembership, createUserProfile } from "@lib/userService";
+import type { DiscordInviteStatus } from "@/lib/server/discordSync";
+import { FaDiscord } from "react-icons/fa";
 import { getGitHubUser, inviteUserToOrganization } from "@lib/githubService";
+import { checkDiscordUsername, DISCORD_NOT_FOUND_HINT } from "@lib/discordService";
 import { TECHNOLOGIES, TOPICS, getGraduationYearOptions } from "@data";
 import FormHeader from "@components/forms/FormHeader";
 import FormSection from "@components/forms/FormSection";
@@ -35,6 +38,8 @@ const ALL_TOPICS = TOPICS.flatMap((g) => g.topics);
 export default function SignUpPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(false);
+  // Filled in after sign-up; shows a Discord invite if they aren't in the server
+  const [discordInvite, setDiscordInvite] = useState<DiscordInviteStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   const [formData, setFormData] = useState<SignUpFormData>({
@@ -149,6 +154,12 @@ export default function SignUpPage() {
     setErrorMessage("");
 
     try {
+      // Saved exactly as Discord spells it when they're in the server, so the
+      // bot can match them; otherwise as typed
+      const discordCheck = await checkDiscordUsername(formData.discordUsername);
+      const discordUsername =
+        (discordCheck.inServer && discordCheck.username) || formData.discordUsername;
+
       // No password is stored here: Firebase Auth owns credentials, and a copy
       // of the hash in the profile only created something to leak
       const userData: User = {
@@ -156,7 +167,7 @@ export default function SignUpPage() {
         firstName: formData.firstName,
         lastName: formData.lastName,
         gitHubUsername: formData.gitHubUsername,
-        discordUsername: formData.discordUsername,
+        discordUsername,
         graduationYear: formData.graduationYear,
         technologiesExperiencedWith: formData.technologiesExperiencedWith,
         preferredTopics: formData.preferredTopics,
@@ -186,6 +197,12 @@ export default function SignUpPage() {
       inviteUserToOrganization().catch((err) =>
         console.error("Failed to send org invite:", err)
       );
+
+      // Also fire-and-forget: the server emails a Discord invite if they
+      // aren't in the server yet, and the link shows on the confirmation
+      checkDiscordMembership()
+        .then(setDiscordInvite)
+        .catch((err) => console.error("Failed to check Discord membership:", err));
 
       // Stay on the confirmation so they can read the note about checking spam;
       // they leave when they're ready
@@ -303,6 +320,21 @@ export default function SignUpPage() {
               isRequired={true}
               value={formData.discordUsername}
               onChange={(value) => setFormData((prev) => ({ ...prev, discordUsername: value }))}
+              // Advice, not a requirement: many people join the server after signing up
+              asyncHint={async (username: string) => {
+                const result = await checkDiscordUsername(username);
+                if (!result.checked || result.inServer) return null;
+                return (
+                  <>
+                    We couldn&apos;t find this username in the Open Sourcery Discord server.{" "}
+                    {DISCORD_NOT_FOUND_HINT} Haven&apos;t joined yet?{" "}
+                    <a href={result.inviteUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                      Join the server
+                    </a>
+                    , then you can continue.
+                  </>
+                );
+              }}
             />
           </FormSection>
         )}
@@ -363,6 +395,24 @@ export default function SignUpPage() {
                   Please check your inbox and click the link to verify your account. If you cannot locate the email, please check your spam.
                 </p>
               </div>
+              {discordInvite && discordInvite.inServer !== true && (
+                <div className="bg-[#5865f2]/10 border border-[#5865f2]/30 rounded-lg p-4 mb-6">
+                  <p className="text-[#3c45a5] font-medium">Join our Discord</p>
+                  <p className="text-[#4752c4] text-sm mt-1 mb-3">
+                    Project channels, questions and announcements all happen there. Once you&apos;re
+                    in, you&apos;ll be added to your project&apos;s channel when you join one.
+                  </p>
+                  <a
+                    href={discordInvite.inviteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#5865f2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4752c4] transition-colors"
+                  >
+                    <FaDiscord aria-hidden size={16} />
+                    Join the server
+                  </a>
+                </div>
+              )}
               <Link
                 href="/"
                 className="y2k-button inline-flex px-8 py-3 font-semibold text-white"

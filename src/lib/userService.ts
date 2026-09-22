@@ -10,7 +10,8 @@ import {
   User as FirebaseUser,
 } from "firebase/auth";
 import { User } from "@/types/users";
-import { postAuthorized } from "./apiClient";
+import { authorizedFetch, postAuthorized } from "./apiClient";
+import type { DiscordInviteStatus } from "./server/discordSync";
 
 /**
  * Creates a new user profile in Firestore
@@ -152,4 +153,18 @@ export async function deleteAccount(firebaseUser: FirebaseUser, password: string
 
   // The account is gone on the server; drop the local session too
   await signOut(auth);
+}
+
+/**
+ * Whether the signed-in user is in the Discord server. If they aren't, the
+ * server emails them the invite link, and the link comes back to show too.
+ */
+export async function checkDiscordMembership(): Promise<DiscordInviteStatus> {
+  const response = await authorizedFetch("/api/discord", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "inviteIfNeeded" }),
+  });
+  if (!response.ok) throw new Error(`Discord check failed: ${response.status}`);
+  return response.json();
 }

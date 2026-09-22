@@ -22,6 +22,7 @@ import {
 import { authorizedFetch, postAuthorized } from './apiClient';
 // Type-only, so none of the server code reaches the browser bundle
 import type { LeadProfile, TeamMember } from './server/profiles';
+import type { JoinDiscordStatus } from './server/memberActions';
 
 export type ProjectLead = LeadProfile;
 export type ProjectTeamMember = TeamMember;
@@ -282,8 +283,12 @@ export async function getPendingProposals(uid: string): Promise<Project[]> {
  * project, no pending proposal, room on the team - and sends the repository
  * invitation that makes the user a member.
  */
-export async function joinProject(projectId: string): Promise<void> {
-  await postAuthorized('/api/projects', { action: 'join', projectId });
+export async function joinProject(projectId: string): Promise<JoinDiscordStatus | null> {
+  const result = await postAuthorized<{ discord?: JoinDiscordStatus }>('/api/projects', {
+    action: 'join',
+    projectId,
+  });
+  return result.discord ?? null;
 }
 
 /**

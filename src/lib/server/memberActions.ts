@@ -20,6 +20,8 @@ import {
 } from "@/lib/githubApi";
 import { sendEmail } from "@/lib/emailService";
 import { leadCannotDeleteMessage, leadCannotLeaveMessage } from "@/data";
+import { addToProjectChannel, removeFromProjectChannel } from "./discordSync";
+import { DISCORD_INVITE_URL } from "@/lib/discordApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 const ADMIN_EMAIL = "Open Sourcery <umdopensourcery@gmail.com>";
@@ -244,10 +246,29 @@ async function notifyLeadOfJoin(
 }
 
 /**
+ * Runs a Discord update without letting it affect the membership change it
+ * follows - Discord being down shouldn't fail a join or a leave
+ */
+async function bestEffortDiscord(label: string, update: () => Promise<void>): Promise<void> {
+  try {
+    await update();
+  } catch (error) {
+    console.error(`Discord ${label} failed:`, error);
+  }
+}
+
+/** How the Discord side of a join went, for the page to act on */
+export interface JoinDiscordStatus {
+  /** In the project channel; false if not found in the server; null if unknown */
+  addedToChannel: boolean | null;
+  inviteUrl: string;
+}
+
+/**
  * Joins a project by inviting the caller's own GitHub account to its
  * repository - the invitation is what makes them a member.
  */
-export async function joinProject(uid: string, projectId: unknown): Promise<void> {
+export async function joinProject(uid: string, projectId: unknown): Promise<JoinDiscordStatus> {
   const [profile, userRecord, project] = await Promise.all([
     getProfile(uid),
     adminAuth().getUser(uid),
@@ -322,10 +343,16 @@ export async function joinProject(uid: string, projectId: unknown): Promise<void
     return currentSize + 1;
   });
 
+  let addedToChannel: boolean | null = null;
   await Promise.all([
     storeTeamSize(project, teamSize),
     notifyLeadOfJoin(project, profile, login),
+    bestEffortDiscord("channel add", async () => {
+      addedToChannel = await addToProjectChannel(project.id, profile.discordUsername);
+    }),
   ]);
+
+  return { addedToChannel, inviteUrl: DISCORD_INVITE_URL };
 }
 
 /**
@@ -345,7 +372,12 @@ export async function leaveProject(uid: string, projectId: unknown): Promise<voi
   const login = requireGitHubUsername(profile);
 
   await removeUserFromRepository(login, GITHUB_ORG, project.repositoryName);
-  await refreshTeamSize(project);
+  await Promise.all([
+    refreshTeamSize(project),
+    bestEffortDiscord("channel removal", () =>
+      removeFromProjectChannel(project.id, profile.discordUsername)
+    ),
+  ]);
 }
 
 /**
@@ -433,7 +465,14 @@ export async function deleteAccount(uid: string): Promise<void> {
         removeUserFromRepository(login, GITHUB_ORG, project.repositoryName)
       )
     );
-    await Promise.all(current.map(refreshTeamSize));
+    await Promise.all([
+      ...current.map(refreshTeamSize),
+      ...current.map((project) =>
+        bestEffortDiscord("channel removal", () =>
+          removeFromProjectChannel(project.id, profile.discordUsername)
+        )
+      ),
+    ]);
   }
 
   // Needs the profile for the board's email, so it runs before the delete

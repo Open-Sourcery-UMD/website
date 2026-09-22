@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
     const { action, projectId } = body ?? {};
 
     switch (action) {
+      // Also reports how the Discord side went, so the page can say so
       case "join":
-        await joinProject(uid, projectId);
-        break;
+        return NextResponse.json({ success: true, discord: await joinProject(uid, projectId) });
 
       case "leave":
         await leaveProject(uid, projectId);

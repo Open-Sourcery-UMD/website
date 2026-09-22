@@ -106,13 +106,14 @@ export default function LeadDeveloperGuidePage() {
               body: (
                 <>
                   Navigate to <SiteLink href="/project-proposal-form">Start a Project</SiteLink> and
-                  fill out the details for your project.
+                  fill out the details for your project. On our end, we&apos;ll approve your project and create its
+                  repository in our GitHub organization.
                 </>
               ),
             },
           ]}
         />
-        <GuideTopic title="Once your repository is created:">
+        <GuideTopic title="Once we create your repository:">
           <Bullets
             items={[
               <>
@@ -133,7 +134,7 @@ export default function LeadDeveloperGuidePage() {
       <GuideSection id="running" title="Running Your Project">
         <GuideTopic title="Your GitHub Project Board">
           <p>
-            Your board is your team&apos;s single source of truth, so keep it updated during and
+            Your project board should be your team&apos;s single source of truth; keep it updated during and
             between meetings. A typical board moves through these columns, left to right:
           </p>
           <BoardColumns />
@@ -234,9 +235,10 @@ export default function LeadDeveloperGuidePage() {
       <GuideSection id="connected" title="Staying Connected">
         <GuideTopic title="Your Project's Discord Channel">
           <p>
-            We recommend creating a Discord channel for your project (under the
-            &quot;Projects&quot; category), named to match your project. Add members to it as they
-            join.
+            Once your repository is created, your project automatically gets its own private
+            Discord channel under the &quot;Projects&quot; category, named to match your project,
+            with you already in it. Developers are added to it when they join your project and
+            removed if they leave, so there&apos;s nothing to set up or maintain.
           </p>
         </GuideTopic>
         <GuideTopic title="Points of Contact">

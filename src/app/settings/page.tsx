@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
@@ -8,6 +8,7 @@ import { auth } from "@firebaseConfig";
 import { useAuth } from "@context/AuthContext";
 import { deleteAccount, updateUserProfile, resendVerificationEmail } from "@lib/userService";
 import { getGitHubUser } from "@lib/githubService";
+import { checkDiscordUsername, DISCORD_NOT_FOUND_HINT } from "@lib/discordService";
 import { leaveProject, withdrawProposal } from "@/lib/projectService";
 import { useUserProjects } from "@hooks/useUserProjects";
 import {
@@ -82,7 +83,7 @@ export default function SettingsPage() {
   const [leavingProjectId, setLeavingProjectId] = useState<string | null>(null);
   const [withdrawingProposalId, setWithdrawingProposalId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState<ReactNode>("");
   const [resendingEmail, setResendingEmail] = useState(false);
   const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -197,6 +198,34 @@ export default function SettingsPage() {
       if (!confirmed) return;
     }
 
+    // A new Discord username has to belong to someone in the server, or the
+    // bot can't give them their roles or project channels. An unchanged one
+    // isn't re-checked, so this never blocks saving other settings.
+    let discordUsername = formData.discordUsername;
+    const discordChanged =
+      originalData &&
+      formData.discordUsername.trim().toLowerCase() !==
+        originalData.discordUsername.trim().toLowerCase();
+
+    if (discordChanged) {
+      const result = await checkDiscordUsername(formData.discordUsername);
+      if (result.checked && !result.inServer) {
+        setErrorMessage(
+          <>
+            We couldn&apos;t find &quot;{formData.discordUsername}&quot; in the Open Sourcery
+            Discord server. {DISCORD_NOT_FOUND_HINT} If you haven&apos;t joined yet,{" "}
+            <a href={result.inviteUrl} target="_blank" rel="noopener noreferrer" className="underline font-medium">
+              join the server
+            </a>{" "}
+            first.
+          </>
+        );
+        return;
+      }
+      // Saved exactly as Discord spells it
+      if (result.inServer && result.username) discordUsername = result.username;
+    }
+
     setSubmitting(true);
 
     try {
@@ -204,7 +233,7 @@ export default function SettingsPage() {
         firstName: formData.firstName,
         lastName: formData.lastName,
         gitHubUsername: formData.gitHubUsername,
-        discordUsername: formData.discordUsername,
+        discordUsername,
         graduationYear: formData.graduationYear,
         technologiesExperiencedWith:
           formData.technologiesExperiencedWith,
@@ -222,7 +251,9 @@ export default function SettingsPage() {
           : prev
       );
 
-      setOriginalData(formData);
+      const saved = { ...formData, discordUsername };
+      setFormData(saved);
+      setOriginalData(saved);
 
       setSuccessMessage("Changes saved successfully!");
       setTimeout(() => setSuccessMessage(""), 2000);
@@ -519,6 +550,14 @@ export default function SettingsPage() {
             isRequired={true}
             value={formData.discordUsername}
             onChange={(value) => setFormData((prev) => ({ ...prev, discordUsername: value }))}
+            asyncValidators={[
+              async (username: string) => {
+                const result = await checkDiscordUsername(username);
+                return result.checked && !result.inServer
+                  ? `Not found in the Open Sourcery Discord server. ${DISCORD_NOT_FOUND_HINT}`
+                  : null;
+              },
+            ]}
           />
         </div>
 

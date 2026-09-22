@@ -1,5 +1,6 @@
 import { db } from "./lib/firebase-admin";
 import { sendEmail } from "../src/lib/emailService";
+import { launchProjectOnDiscord } from "../src/lib/server/discordSync";
 import {
   getOrganizationRepositories,
   getRepositoryMembership,
@@ -138,6 +139,15 @@ async function activateProposedProjects(): Promise<number> {
     await db.collection("projects").doc(projectDoc.id).update({
       status: "IN_PROGRESS",
     });
+
+    // Its channel and the #project-updates announcement. Best-effort: the
+    // project is live either way, and the daily Discord sync creates the
+    // channel later if this fails.
+    try {
+      await launchProjectOnDiscord(projectDoc.id);
+    } catch (error) {
+      console.error(`Couldn't announce "${project.projectName}" on Discord:`, error);
+    }
 
     updated++;
   }

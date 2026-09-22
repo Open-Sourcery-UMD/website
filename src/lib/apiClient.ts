@@ -26,9 +26,9 @@ export async function authorizedFetch(
 
 /**
  * POSTs JSON as the signed-in user, throwing the server's message on failure
- * so it can be shown as-is.
+ * so it can be shown as-is. Resolves to the response body.
  */
-export async function postAuthorized(url: string, body: unknown): Promise<void> {
+export async function postAuthorized<T = unknown>(url: string, body: unknown): Promise<T> {
   const response = await authorizedFetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -39,4 +39,6 @@ export async function postAuthorized(url: string, body: unknown): Promise<void> 
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || 'Something went wrong. Please try again.');
   }
+
+  return response.json().catch(() => ({}) as T);
 }

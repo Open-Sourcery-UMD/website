@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 
 interface TextQuestionProps {
   question: string;
@@ -14,6 +14,11 @@ interface TextQuestionProps {
   type?: string;
   /** Tighter spacing and a full-width input, for short forms like log-in */
   compact?: boolean;
+  /**
+   * A note shown under the field once it passes validation - for advice that
+   * shouldn't block the form, unlike a validator's error
+   */
+  asyncHint?: (input: string) => Promise<ReactNode | null>;
 }
 
 const TextQuestion: React.FC<TextQuestionProps> = ({
@@ -27,9 +32,11 @@ const TextQuestion: React.FC<TextQuestionProps> = ({
   onChange,
   type = "text",
   compact = true,
+  asyncHint,
 }) => {
   const [internalInput, setInternalInput] = useState("");
   const [error, setError] = useState("");
+  const [hint, setHint] = useState<ReactNode | null>(null);
   const [isValidating, setIsValidating] = useState(false);
 
   const isControlled = value !== undefined;
@@ -78,12 +85,21 @@ const TextQuestion: React.FC<TextQuestionProps> = ({
 
     if (isValid) {
       setError("");
+      if (asyncHint && inputValue.length > 0) {
+        try {
+          setHint(await asyncHint(inputValue));
+        } catch (err) {
+          console.error("Async hint error:", err);
+        }
+      }
     }
 
     setIsValidating(false);
   }
 
   const handleChange = (newValue: string) => {
+    // A hint about the old value no longer applies
+    setHint(null);
     if (isControlled) {
       onChange?.(newValue);
     } else {
@@ -122,6 +138,12 @@ const TextQuestion: React.FC<TextQuestionProps> = ({
             { error }
           </p>
         </label>
+
+        {hint && !error && (
+          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {hint}
+          </div>
+        )}
     </div>
   );
 }
