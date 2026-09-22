@@ -20,6 +20,9 @@ export const DISCORD_INVITE_URL =
 // Looked up by name, so renaming these in Discord means updating them here
 const LEAD_ROLE_NAME = "Lead Developers";
 const DEVELOPER_ROLE_NAME = "Developers";
+// Given access to every project channel the bot creates, so project
+// management can see each team's channel
+const DIRECTORS_ROLE_NAME = "Directors of Project Management";
 const PROJECTS_CATEGORY_NAME = "projects";
 const PROJECT_UPDATES_CHANNEL_NAME = "project-updates";
 
@@ -138,6 +141,8 @@ export async function findMemberByUsername(username: string): Promise<DiscordMem
 export interface DiscordSetup {
   leadRoleId: string;
   developerRoleId: string;
+  /** Null if the server has no such role; channels are still created */
+  directorsRoleId: string | null;
   projectsCategoryId: string;
   projectUpdatesChannelId: string | null;
   botUserId: string;
@@ -160,6 +165,10 @@ export async function getDiscordSetup(): Promise<DiscordSetup> {
 
   const leadRoleId = byName(LEAD_ROLE_NAME);
   const developerRoleId = byName(DEVELOPER_ROLE_NAME);
+  const directorsRoleId = byName(DIRECTORS_ROLE_NAME) ?? null;
+  if (!directorsRoleId) {
+    console.warn(`No "${DIRECTORS_ROLE_NAME}" role found; new project channels won't include it`);
+  }
   const projectsCategoryId = channels.find(
     (channel) =>
       channel.type === CHANNEL_TYPE_CATEGORY &&
@@ -184,6 +193,7 @@ export async function getDiscordSetup(): Promise<DiscordSetup> {
   return {
     leadRoleId: leadRoleId!,
     developerRoleId: developerRoleId!,
+    directorsRoleId,
     projectsCategoryId: projectsCategoryId!,
     projectUpdatesChannelId,
     botUserId: bot.id,
@@ -226,7 +236,8 @@ export async function getChannel(channelId: string): Promise<DiscordChannel | nu
 
 /**
  * A private channel under the projects category: hidden from @everyone, with
- * the bot kept able to see it. Server admins see every channel regardless.
+ * the bot and the Directors of Project Management kept able to see it. Server
+ * admins see every channel regardless.
  *
  * The bot's own overwrite only allows viewing: managing the channel and its
  * members comes from its role's server-wide Manage Channels and Manage Roles.
@@ -244,6 +255,16 @@ export function createPrivateProjectChannel(name: string, setup: DiscordSetup): 
         // The @everyone role shares the server's id
         { id: DISCORD_GUILD_ID, type: OVERWRITE_TYPE_ROLE, deny: VIEW_CHANNEL.toString(), allow: "0" },
         { id: setup.botUserId, type: OVERWRITE_TYPE_MEMBER, allow: VIEW_CHANNEL.toString(), deny: "0" },
+        ...(setup.directorsRoleId
+          ? [
+              {
+                id: setup.directorsRoleId,
+                type: OVERWRITE_TYPE_ROLE,
+                allow: TEAM_ALLOW.toString(),
+                deny: "0",
+              },
+            ]
+          : []),
       ],
     }),
   });
