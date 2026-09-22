@@ -3,12 +3,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { HiOutlineCog, HiOutlineUser } from 'react-icons/hi';
+import { useAuth } from '@context/AuthContext';
 import { navigationItems } from './Navbar';
-import NavbarIcon from './NavbarIcon';
+
+const ACCOUNT_ITEMS = [
+  { name: 'Sign Up', link: '/sign-up' },
+  { name: 'Log In', link: '/log-in' },
+];
 
 export const NavbarMobileMenu = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const { firebaseUser, loading } = useAuth();
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -18,6 +25,12 @@ export const NavbarMobileMenu = () => {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prev) => !prev);
+  };
+
+  // Every link in the drawer closes it on the way out
+  const closeMenu = () => {
+    setIsMobileMenuOpen(false);
+    setActiveDropdown(null);
   };
 
   const toggleDropdown = (name: string) => {
@@ -94,10 +107,7 @@ export const NavbarMobileMenu = () => {
                             <li key={subIndex}>
                               <Link
                                 href={subItem.link}
-                                onClick={() => {
-                                  setIsMobileMenuOpen(false);
-                                  setActiveDropdown(null);
-                                }}
+                                onClick={closeMenu}
                                 className="block py-1 text-graphite-soft transition-colors hover:text-azure"
                               >
                                 {subItem.name}
@@ -110,7 +120,7 @@ export const NavbarMobileMenu = () => {
                   ) : (
                     <Link
                       href={item.link || '/'}
-                      onClick={() => setIsMobileMenuOpen(false)}
+                      onClick={closeMenu}
                       className="text-graphite transition-colors hover:text-azure"
                     >
                       {item.name}
@@ -119,10 +129,52 @@ export const NavbarMobileMenu = () => {
                 </li>
               ))}
 
-              {/* Navbar Icon (mobile version) */}
-              <li className="mt-2 border-t border-black/10 pt-6">
-                <NavbarIcon />
-              </li>
+              {/*
+                Account, laid out like the other items rather than reusing the
+                desktop icon and its hover menu: signed out it expands Sign Up
+                and Log In in place, like Projects does
+              */}
+              {!loading && (
+                <li className="mt-2 flex flex-col border-t border-black/10 pt-6">
+                  {firebaseUser ? (
+                    <Link
+                      href="/settings"
+                      onClick={closeMenu}
+                      className="flex items-center gap-2 text-graphite transition-colors hover:text-azure"
+                    >
+                      <HiOutlineCog size={22} aria-hidden />
+                      Settings
+                    </Link>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => toggleDropdown('account')}
+                        aria-expanded={activeDropdown === 'account'}
+                        className="flex items-center gap-2 text-left text-graphite transition-colors hover:text-azure"
+                      >
+                        <HiOutlineUser size={22} aria-hidden />
+                        Account
+                      </button>
+
+                      {activeDropdown === 'account' && (
+                        <ul className="mt-3 flex flex-col gap-2 border-l border-black/10 pl-4 text-base">
+                          {ACCOUNT_ITEMS.map((accountItem) => (
+                            <li key={accountItem.link}>
+                              <Link
+                                href={accountItem.link}
+                                onClick={closeMenu}
+                                className="block py-1 text-graphite-soft transition-colors hover:text-azure"
+                              >
+                                {accountItem.name}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </li>
+              )}
             </ul>
           </div>,
           document.body
