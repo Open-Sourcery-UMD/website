@@ -46,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body
         className={`text-graphite font-sans ${dmSans.variable} ${orbitron.variable} ${spaceMono.variable}`}
       >

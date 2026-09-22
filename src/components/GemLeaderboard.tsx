@@ -142,7 +142,11 @@ function GitHubLink({ username }: { username: string }) {
 /** The glass card every state sits in, so loading doesn't jump the layout */
 function Shell({ semester, children }: { semester: string; children: ReactNode }) {
   return (
-    <div className="surface holo-rim relative overflow-hidden rounded-3xl px-4 pt-6 pb-5 sm:px-8 sm:pt-7 sm:pb-8">
+    <div
+      className="surface holo-rim relative overflow-hidden rounded-3xl px-4 pt-6 pb-5 sm:px-8 sm:pt-7 sm:pb-8"
+      // Light blue to light green
+      style={{ '--rim': 'linear-gradient(90deg, #8fd0ff, #7fe0b0, #8fd0ff)' } as CSSProperties}
+    >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <p className="eyebrow">Top 5 · {semester}</p>
         <p className="text-xs text-graphite-mute">{REFRESH_NOTE}</p>

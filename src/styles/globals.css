@@ -248,13 +248,14 @@
     background-color: var(--chip);
   }
 
-  /* A holographic rim along a card's top edge, shimmering slowly */
+  /* A holographic rim along a card's top edge, shimmering slowly. A card can
+     set --rim to shimmer in its own colours instead. */
   .holo-rim::before {
     content: '';
     position: absolute;
     inset: 0 0 auto 0;
     height: 3px;
-    background: linear-gradient(90deg, #98f0ff, #b9a4ff, #ffb3de, #98f0ff);
+    background: var(--rim, linear-gradient(90deg, #98f0ff, #b9a4ff, #ffb3de, #98f0ff));
     background-size: 240% 100%;
     animation: holo-shift 9s linear infinite;
   }

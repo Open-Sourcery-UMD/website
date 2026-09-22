@@ -141,6 +141,7 @@ const Home = () => {
             text="Have a cool idea? Submit a project proposal to become a Lead Developer of an open-source project team and connect with likeminded contributors."
             link="/project-proposal-form"
             label="Start a Project"
+            info={{ link: '/guides/lead-developer', label: 'Read the Lead Developer Guide' }}
             icon={
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -164,6 +165,7 @@ const Home = () => {
             text="Browse our projects to join our community of Developers and help build awesome open-source software on a project team."
             link="/our-projects"
             label="Join a Project"
+            info={{ link: '/guides/developer', label: 'Read the Developer Guide' }}
             icon={
               <svg
                 xmlns="http://www.w3.org/2000/svg"

@@ -11,6 +11,9 @@ export const navigationItems = [
   { name: 'Home',
     color: 'white',
     link: '/' },
+  { name: 'About',
+    color: 'white',
+    link: '/about' },
   { name: 'Projects',
     color: 'white',
     subItems: [

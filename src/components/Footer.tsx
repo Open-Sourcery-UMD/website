@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { cloneElement } from 'react';
-import { FaInstagram, FaGithub, FaRegEnvelope } from 'react-icons/fa';
+import { FaDiscord, FaGithub, FaInstagram, FaLinkedinIn, FaRegEnvelope } from 'react-icons/fa';
 
 interface FooterIconProps {
   link: string;
@@ -32,13 +32,16 @@ const FooterIcon: React.FC<FooterIconProps> = (props: FooterIconProps) => {
   );
 };
 
-// Each service's own colours: a manila-envelope brown for mail, GitHub's
-// near-black, and Instagram's corner-lit gradient
+// Each service's own colours: a manila-envelope brown for mail, Discord's
+// blurple, GitHub's near-black, Instagram's corner-lit gradient and
+// LinkedIn's blue
 const FILLS = {
   email: 'linear-gradient(135deg, #b3855a 0%, #7a5433 100%)',
+  discord: 'linear-gradient(135deg, #7984f5 0%, #5865f2 100%)',
   github: 'linear-gradient(135deg, #3a4149 0%, #0d1117 100%)',
   instagram:
     'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%)',
+  linkedin: 'linear-gradient(135deg, #2a86e0 0%, #0a66c2 100%)',
 };
 
 interface Props {
@@ -63,6 +66,12 @@ export const Footer = ({ className }: Props) => {
               icon={<FaRegEnvelope />}
             />
             <FooterIcon
+              link="https://discord.com/invite/BWvbpgskZT"
+              ariaLabel="Discord"
+              fill={FILLS.discord}
+              icon={<FaDiscord />}
+            />
+            <FooterIcon
               link="https://github.com/open-sourcery-umd"
               ariaLabel="Github"
               fill={FILLS.github}
@@ -73,6 +82,12 @@ export const Footer = ({ className }: Props) => {
               ariaLabel="Instagram"
               fill={FILLS.instagram}
               icon={<FaInstagram />}
+            />
+            <FooterIcon
+              link="https://www.linkedin.com/company/Open-Sourcery-UMD/"
+              ariaLabel="LinkedIn"
+              fill={FILLS.linkedin}
+              icon={<FaLinkedinIn />}
             />
           </div>
 
