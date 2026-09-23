@@ -32,3 +32,26 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   }
   return response.json();
 }
+
+export interface ShieldGemResult {
+  awarded: boolean;
+  earnedToday: number;
+}
+
+/** Claims the gem for catching a green shield on the home page */
+export async function catchShieldGem(): Promise<ShieldGemResult> {
+  const response = await authorizedFetch('/api/gems', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'shieldGem' }),
+  });
+  if (!response.ok) throw new Error(`Failed to claim gem: ${response.status}`);
+  return response.json();
+}
+
+/** Shields caught today, which sets the odds of the next green one */
+export async function getShieldsToday(): Promise<number> {
+  const response = await authorizedFetch('/api/gems?action=shieldsToday');
+  if (!response.ok) throw new Error(`Failed to load shield count: ${response.status}`);
+  return (await response.json()).earnedToday ?? 0;
+}

@@ -23,6 +23,10 @@ import {
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 const SPECIAL_EVENT_NAMES = ["hack session", "gbm", "general body meeting"];
 
+// The home page easter egg: one gem a shield, at most five a day
+export const SHIELD_GEM_VALUE = 1;
+export const SHIELD_GEMS_PER_DAY = 5;
+
 const LEADERBOARD_SIZE = 5;
 const LEADERBOARD_TTL_MS = 10 * 60_000;
 // Users scored at once during a refresh, so a cold rebuild doesn't fire every
@@ -33,8 +37,8 @@ export interface GemAction {
   label: string;
   /** Gems per unit - per issue or PR for aggregated lines, else the line's total */
   gems: number;
-  /** Set on lines that aggregate several issues or PRs */
-  unit?: "issue" | "PR";
+  /** Set on lines that aggregate several of the same thing */
+  unit?: "issue" | "PR" | "shield";
 }
 
 export interface GemBreakdown {
@@ -126,6 +130,17 @@ async function computeFromProfile(
   let totalGems = 0;
   const actions: GemAction[] = [];
 
+  // Shields caught on the home page, kept per semester like everything else
+  const shields = shieldGemsThisSemester(profile, startDate);
+  if (shields > 0) {
+    totalGems += shields;
+    actions.push({
+      label: `Caught ${shields} flying Gemshield${shields !== 1 ? "s" : ""}`,
+      gems: SHIELD_GEM_VALUE,
+      unit: "shield",
+    });
+  }
+
   // Events attended this semester
   if (Array.isArray(profile.eventsAttended)) {
     // A repeated check-in can append the same event twice (arrayUnion only
@@ -211,6 +226,17 @@ async function computeFromProfile(
 }
 
 /**
+ * Gems caught on the home page this semester. The stored count belongs to the
+ * semester it was earned in, so it falls away with everything else at the
+ * turn of the term.
+ */
+function shieldGemsThisSemester(profile: DocumentData, startDate: Date): number {
+  const shields = profile.shieldGems;
+  if (!shields || shields.semester !== startDate.toISOString()) return 0;
+  return Number(shields.total) || 0;
+}
+
+/**
  * The signed-in user's own gems for the current semester, with the actions
  * that earned them
  */
@@ -238,7 +264,7 @@ async function computeLeaderboard(): Promise<LeaderboardEntry[]> {
     // Only what scoring needs - never emails or anything else private
     adminDb()
       .collection("users")
-      .select("firstName", "lastName", "gitHubUsername", "eventsAttended")
+      .select("firstName", "lastName", "gitHubUsername", "eventsAttended", "shieldGems")
       .get(),
     buildMembershipIndex(),
   ]);
@@ -314,4 +340,65 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   }
 
   return cachedLeaderboard ? cachedLeaderboard.entries : leaderboardRefresh;
+}
+
+export interface ShieldGemResult {
+  /** False once the day's five are gone */
+  awarded: boolean;
+  /** Gems caught today, after this one */
+  earnedToday: number;
+}
+
+/** The UTC day a shield gem counts towards */
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Awards a gem for catching a green shield, up to five a day.
+ *
+ * The cap is enforced in a transaction, so quick repeat clicks - or a second
+ * tab - can't get past it.
+ */
+export async function awardShieldGem(uid: string): Promise<ShieldGemResult> {
+  const ref = adminDb().collection("users").doc(uid);
+  const semester = getSemesterStart().toISOString();
+  const day = today();
+
+  const { awarded, earnedToday } = await adminDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) return { awarded: false, earnedToday: 0 };
+
+    const shields = snapshot.data()!.shieldGems;
+    const sameSemester = shields?.semester === semester;
+    const sameDay = sameSemester && shields?.day === day;
+
+    const earned = sameDay ? Number(shields.today) || 0 : 0;
+    if (earned >= SHIELD_GEMS_PER_DAY) return { awarded: false, earnedToday: earned };
+
+    transaction.set(
+      ref,
+      {
+        shieldGems: {
+          semester,
+          day,
+          today: earned + 1,
+          total: (sameSemester ? Number(shields.total) || 0 : 0) + SHIELD_GEM_VALUE,
+        },
+      },
+      { merge: true }
+    );
+    return { awarded: true, earnedToday: earned + 1 };
+  });
+
+  return { awarded, earnedToday };
+}
+
+/** How many shields they've caught today, for the odds of the next one */
+export async function getShieldGemsToday(uid: string): Promise<number> {
+  const snapshot = await adminDb().collection("users").doc(uid).get();
+  const shields = snapshot.data()?.shieldGems;
+  const semester = getSemesterStart().toISOString();
+  if (!shields || shields.semester !== semester || shields.day !== today()) return 0;
+  return Number(shields.today) || 0;
 }

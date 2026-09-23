@@ -42,11 +42,11 @@ const REFRESH_NOTE = 'Refreshes every 10 min';
 function GemCount({ gems, large = false }: { gems: number; large?: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full bg-white/85 font-semibold text-azure shadow-[inset_0_1px_0_#fff,0_2px_8px_-4px_rgba(0,113,188,0.4)] ${
+      className={`inline-flex items-center gap-1.5 rounded-full bg-white/85 font-semibold text-[#2fbb8f] shadow-[inset_0_1px_0_#fff,0_2px_8px_-4px_rgba(47,187,143,0.4)] ${
         large ? 'px-3.5 py-1.5 text-base' : 'px-3 py-1 text-sm'
       }`}
     >
-      <FaGem className="text-[#4fb6ee]" size={large ? 14 : 12} aria-hidden />
+      <FaGem className="text-[#2fbb8f]" size={large ? 14 : 12} aria-hidden />
       {gems}
       <span className="sr-only">gems</span>
     </span>
@@ -188,7 +188,7 @@ export default function GemLeaderboard({ semester }: { semester: string }) {
     return (
       <Shell semester={semester}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <FaGem aria-hidden size={22} className="text-[#4fb6ee]" />
+          <FaGem aria-hidden size={22} className="text-[#2fbb8f]" />
           <p className="text-graphite-soft">
             <Link href="/log-in" className="font-medium text-azure underline">
               Sign in
@@ -220,7 +220,7 @@ export default function GemLeaderboard({ semester }: { semester: string }) {
     return (
       <Shell semester={semester}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <FaGem aria-hidden size={22} className="text-[#4fb6ee]" />
+          <FaGem aria-hidden size={22} className="text-[#2fbb8f]" />
           <p className={error ? 'text-red-600' : 'text-graphite-soft'}>
             {error
               ? "Couldn't load the leaderboard. Please try again in a moment."

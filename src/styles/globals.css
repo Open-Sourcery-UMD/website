@@ -390,10 +390,10 @@
 @keyframes bob {
   0%,
   100% {
-    transform: translateY(0) rotate(-1deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-16px) rotate(1deg);
+    transform: translateY(-16px);
   }
 }
 
@@ -426,6 +426,117 @@
 .sparkle {
   animation: sparkle-fall var(--duration) ease-in infinite;
   animation-delay: var(--delay);
+}
+
+/* The ribbon trailing a flying shield: it ripples rather than sitting still */
+@keyframes ribbon-flutter {
+  0%,
+  100% {
+    transform: translateY(-50%) scaleY(1) skewX(0deg);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-50%) scaleY(0.55) skewX(-6deg);
+    opacity: 1;
+  }
+}
+
+.animate-ribbon {
+  animation: ribbon-flutter 0.9s ease-in-out infinite;
+}
+
+/*
+ * The gem popup's whole life in one animation - in, hold, out - so its
+ * fade can't be skipped by a re-render restarting a timer.
+ */
+@keyframes gem-popup {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.animate-gem-popup {
+  animation: gem-popup 5s ease forwards;
+}
+
+/* A bubble bursting: a ring thrown outwards as the shield goes */
+@keyframes pop-ring {
+  0% {
+    transform: scale(0.45);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+
+.animate-pop-ring {
+  animation: pop-ring 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* The gem earned, drifting up from where the shield popped */
+@keyframes gem-plus-one {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.7);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-46px) scale(1);
+  }
+}
+
+.animate-plus-one {
+  animation: gem-plus-one 1s ease-out forwards;
+}
+
+/* The black shield going up: a flash, then shards thrown outwards */
+@keyframes boom-flash {
+  0% {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.animate-boom-flash {
+  animation: boom-flash 480ms ease-out forwards;
+}
+
+@keyframes boom-shard {
+  0% {
+    transform: rotate(var(--angle)) translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle)) translateX(var(--distance)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.animate-boom-shard {
+  animation: boom-shard 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Sparkles that pulse in place, for things that should glint, not fall */

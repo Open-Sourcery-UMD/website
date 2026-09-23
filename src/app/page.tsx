@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { CREST_MAX_WIDTH, placeCrest } from '@/lib/heroCrest';
 
 import { PageContainer, SectionContainer } from '@components/Container';
 import ExploreLink from '@components/ExploreLink';
@@ -24,6 +25,68 @@ const Home = () => {
   const typingSpeed = 100;
   const cursorBlinkSpeed = 530;
   const [showCursor, setShowCursor] = useState(true);
+
+  /*
+   * The crest sits midway between the end of the wordmark and the right edge
+   * of the screen - and shrinks to fit when that gap is narrower than it is,
+   * which happens on smaller desktops. See placeCrest for the reasoning.
+   */
+  const wordmarkRef = useRef<HTMLSpanElement | null>(null);
+  const crestRef = useRef<HTMLDivElement | null>(null);
+  const [crestShift, setCrestShift] = useState(0);
+  const [crestWidth, setCrestWidth] = useState(CREST_MAX_WIDTH);
+
+  useEffect(() => {
+    const place = () => {
+      const wordmark = wordmarkRef.current;
+      const crest = crestRef.current;
+      if (!wordmark || !crest) return;
+
+      const { width, centre } = placeCrest(
+        wordmark.getBoundingClientRect().right,
+        window.innerWidth
+      );
+
+      /*
+       * The nudge already applied is read from the DOM, not from React state:
+       * state can be a step ahead of what's painted, and subtracting a shift
+       * that isn't on screen yet would land the crest somewhere wrong - over
+       * the headline, in the worst case.
+       */
+      const applied = new DOMMatrixReadOnly(getComputedStyle(crest).transform).m41;
+      const crestBox = crest.getBoundingClientRect();
+      const restingCentre = crestBox.left + crestBox.width / 2 - applied;
+
+      setCrestWidth((current) => (Math.abs(width - current) < 1 ? current : width));
+      const next = centre - restingCentre;
+      setCrestShift((shift) => (Math.abs(next - shift) < 1 ? shift : next));
+    };
+
+    /*
+     * Placed straight away, then again after the next paint to catch layout
+     * that was still settling. Measuring twice is harmless because the shift
+     * already applied is read back from the DOM each time - and the immediate
+     * call matters in a background tab, where frames don't run at all.
+     */
+    const schedule = () => {
+      place();
+      requestAnimationFrame(place);
+    };
+
+    schedule();
+    // The wordmark's width settles after the web font loads and changes with
+    // the window; the crest's own width changes as it is fitted to the gap
+    const observer = new ResizeObserver(schedule);
+    if (wordmarkRef.current) observer.observe(wordmarkRef.current);
+    if (crestRef.current) observer.observe(crestRef.current);
+    document.fonts?.ready.then(schedule).catch(() => {});
+    window.addEventListener('resize', schedule);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', schedule);
+    };
+  }, []);
 
   useEffect(() => {
     if (isTyping && displayText.length < fullText.length) {
@@ -68,9 +131,11 @@ const Home = () => {
         <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           {/* min-w-0 keeps the headline from widening its column */}
           <div className="min-w-0">
-        <span className="eyebrow animate-rise">Open source at Maryland</span>
+        <span className="eyebrow animate-rise select-none">Open source at Maryland</span>
 
-        <h1 className="mt-7 text-graphite text-[2.75rem] leading-[1.02] sm:text-7xl lg:text-8xl font-semibold animate-rise animation-delay-200">
+        {/* Not selectable: dragging across it while catching shields shouldn't
+            start a text selection */}
+        <h1 className="mt-7 select-none text-graphite text-[2.75rem] leading-[1.02] sm:text-7xl lg:text-8xl font-semibold animate-rise animation-delay-200">
           <span className="block text-black text-2xl sm:text-4xl lg:text-5xl font-normal tracking-tight mb-3">
             We are
           </span>
@@ -79,7 +144,10 @@ const Home = () => {
             so the headline occupies its finished size from the first frame and
             the crest beside it never gets pushed while typing.
           */}
-          <span className="relative inline-block whitespace-normal sm:whitespace-nowrap">
+          <span
+            ref={wordmarkRef}
+            className="relative inline-block whitespace-normal sm:whitespace-nowrap"
+          >
             <span aria-hidden className="invisible">
               {fullText}
             </span>
@@ -96,7 +164,7 @@ const Home = () => {
         </h1>
 
         <div className="mt-10 max-w-2xl animate-rise animation-delay-400">
-          <p className="text-lg sm:text-xl leading-relaxed text-graphite-soft">
+          <p className="text-lg sm:text-xl leading-relaxed text-black select-none">
             Open Sourcery is a group of developers at the{' '}
             <Link
               href={umdLink}
@@ -113,9 +181,20 @@ const Home = () => {
           </div>
 
           {/* The crest, floating beside the wordmark */}
-          {/* Sits at the far edge of its column, clear of the headline */}
-          <div className="hidden lg:block justify-self-end lg:translate-x-6 xl:translate-x-10 animate-rise animation-delay-400">
-            <HeroShield />
+          {/* Centred in the space between the headline and the right edge */}
+          {/*
+            Two elements on purpose: the nudge is a transform, which must not
+            resize the column, and it lives outside the rise animation - a CSS
+            animation on the same element would override an inline transform.
+          */}
+          <div
+            ref={crestRef}
+            style={{ width: crestWidth, transform: `translateX(${crestShift}px)` }}
+            className="hidden min-w-0 lg:block justify-self-center"
+          >
+            <div className="animate-rise animation-delay-400">
+              <HeroShield />
+            </div>
           </div>
         </div>
 
