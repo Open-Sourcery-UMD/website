@@ -59,7 +59,7 @@ export default function GemsPage({ semester }: { semester: string }) {
               <p className="text-graphite-mute text-lg">Loading...</p>
             ) : (
               <>
-                <p className="text-green-400 text-7xl md:text-9xl font-bold mb-8">
+                <p className="font-display text-green-400 text-7xl md:text-9xl font-bold mb-8">
                   {totalGems}
                 </p>
 
@@ -74,7 +74,7 @@ export default function GemsPage({ semester }: { semester: string }) {
                           className="flex items-center justify-between bg-white/70 shadow-card rounded-lg px-4 py-3"
                         >
                           <span className="text-graphite-soft text-sm">{action.label}</span>
-                          <span className="text-ycs-green font-semibold text-sm ml-10 whitespace-nowrap">
+                          <span className="font-display text-ycs-green font-semibold text-sm ml-10 whitespace-nowrap">
                             +{action.gems}
                             {action.unit ? `/${action.unit}` : ''}
                           </span>
@@ -140,11 +140,11 @@ export default function GemsPage({ semester }: { semester: string }) {
             <h3 className="text-graphite text-2xl font-bold mb-6">Attend events</h3>
             <ul className="text-black space-y-3 mb-8 flex-grow">
               <li className="flex items-start gap-3">
-                <span className="text-ycs-green font-bold mt-0.5">+{GEM_VALUES.specialEvent}</span>
+                <span className="font-display text-ycs-green font-bold mt-0.5">+{GEM_VALUES.specialEvent}</span>
                 <span>Earn {GEM_VALUES.specialEvent} Gems for attending Hack Sessions or GBMs</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-ycs-green font-bold">+{GEM_VALUES.otherEvent}</span>
+                <span className="font-display text-ycs-green font-bold">+{GEM_VALUES.otherEvent}</span>
                 <span>Earn {GEM_VALUES.otherEvent} Gems for other events (social events, workshops, etc.)</span>
               </li>
             </ul>
@@ -155,19 +155,19 @@ export default function GemsPage({ semester }: { semester: string }) {
             <h3 className="text-graphite text-2xl font-bold mb-6">Make open-source contributions</h3>
             <ul className="text-black space-y-3 flex-grow">
               <li className="flex items-start gap-3">
-                <span className="text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.issueInOwnProject}</span>
+                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.issueInOwnProject}</span>
                 <span>Earn {GEM_VALUES.issueInOwnProject} Gems for opening an issue in your project</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOwnProject}</span>
+                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOwnProject}</span>
                 <span>Earn {GEM_VALUES.prIntoOwnProject} Gems for getting a PR merged into your project</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOtherProject}</span>
+                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOtherProject}</span>
                 <span>Earn {GEM_VALUES.prIntoOtherProject} Gems for getting a PR merged into another Open Sourcery project</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoPublicRepo}</span>
+                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoPublicRepo}</span>
                 <span>Earn {GEM_VALUES.prIntoPublicRepo} Gems for getting a PR merged into a public repository</span>
               </li>
             </ul>

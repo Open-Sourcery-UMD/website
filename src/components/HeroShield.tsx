@@ -123,11 +123,73 @@ interface Flight {
   caught?: { x: number; y: number };
 }
 
+const SOUNDS = ['/swoosh.mp3', '/pop.mp3', '/gem.mp3', '/explosion.mp3'];
+
+/*
+ * Sound through the Web Audio API rather than <audio> elements.
+ *
+ * An audio element still has to be handed to the browser's media pipeline
+ * when it's asked to play, which can arrive late - heard as a swoosh trailing
+ * the shield. Decoded once into memory, a clip starts on the same frame as
+ * the press, and several can overlap.
+ */
+let audioContext: AudioContext | null = null;
+const decodedSounds = new Map<string, AudioBuffer>();
+/** Elements kept as a fallback where Web Audio isn't available */
+const fallbackSounds = new Map<string, HTMLAudioElement>();
+
+function preloadSounds() {
+  if (audioContext || fallbackSounds.size > 0) return;
+
+  const Context =
+    typeof window !== 'undefined'
+      ? window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      : undefined;
+
+  if (!Context) {
+    for (const file of SOUNDS) {
+      try {
+        const audio = new Audio(file);
+        audio.preload = 'auto';
+        audio.volume = 0.55;
+        fallbackSounds.set(file, audio);
+      } catch {
+        // No sound at all here; the egg works without it
+      }
+    }
+    return;
+  }
+
+  audioContext = new Context();
+  for (const file of SOUNDS) {
+    fetch(file)
+      .then((response) => response.arrayBuffer())
+      .then((data) => audioContext!.decodeAudioData(data))
+      .then((buffer) => decodedSounds.set(file, buffer))
+      .catch((error) => console.error(`Couldn't load ${file}:`, error));
+  }
+}
+
 function playSound(file: string) {
+  const buffer = decodedSounds.get(file);
+
+  if (audioContext && buffer) {
+    // Starts suspended until a gesture; every play here follows a press
+    if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+
+    const source = audioContext.createBufferSource();
+    const gain = audioContext.createGain();
+    gain.gain.value = 0.55;
+    source.buffer = buffer;
+    source.connect(gain).connect(audioContext.destination);
+    source.start();
+    return;
+  }
+
   try {
-    const audio = new Audio(file);
+    const audio = fallbackSounds.get(file) ?? new Audio(file);
     audio.volume = 0.55;
-    // Browsers can still refuse; the egg works without sound either way
+    audio.currentTime = 0;
     audio.play().catch(() => {});
   } catch {
     // No Audio support: silently carry on
@@ -321,7 +383,10 @@ export default function HeroShield() {
   // is a transform, which would otherwise anchor a fixed child to the hero
   // rather than to the screen
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    preloadSounds();
+  }, []);
   const animation = useRef<Animation | null>(null);
   const nextId = useRef(1);
 
@@ -393,16 +458,19 @@ export default function HeroShield() {
     };
   }, [flight]);
 
-  const claimGem = useCallback(async () => {
+  const claimGem = useCallback(async (popupId: number) => {
     try {
       const result = await catchShieldGem();
       setEarnedToday(result.earnedToday);
-      // Nothing is said when the day's five are already spent
-      if (result.awarded) {
-        setGemPopup({ id: nextId.current++, earnedToday: result.earnedToday });
-      }
+
+      setGemPopup((current) => {
+        if (current?.id !== popupId) return current;
+        // Nothing is said if the day's five turn out to be spent already
+        return result.awarded ? { ...current, earnedToday: result.earnedToday } : null;
+      });
     } catch (error) {
       console.error('Error claiming a gem:', error);
+      setGemPopup((current) => (current?.id === popupId ? null : current));
     }
   }, []);
 
@@ -426,7 +494,14 @@ export default function HeroShield() {
       setFrozenUntil(Date.now() + FREEZE_MS);
     } else if (color === 'green') {
       playSound('/gem.mp3');
-      claimGem();
+      // Shown at once, on the count we expect: waiting for the server first
+      // left a gap between the pop and the popup
+      const popupId = nextId.current++;
+      setGemPopup({
+        id: popupId,
+        earnedToday: Math.min(earnedToday + 1, SHIELD_GEMS_PER_DAY),
+      });
+      claimGem(popupId);
     } else {
       playSound('/pop.mp3');
     }
@@ -549,7 +624,7 @@ export default function HeroShield() {
             {flight.caught && flight.color === 'green' && (
               <span
                 aria-hidden
-                className="animate-plus-one absolute inset-x-0 top-0 text-center text-3xl font-bold text-[#2fbb8f] drop-shadow-[0_2px_6px_rgba(255,255,255,0.9)]"
+                className="animate-plus-one absolute inset-x-0 top-0 text-center font-display text-3xl font-bold text-[#2fbb8f] drop-shadow-[0_2px_6px_rgba(255,255,255,0.9)]"
               >
                 +1
               </span>

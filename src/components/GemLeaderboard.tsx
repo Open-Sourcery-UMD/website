@@ -42,7 +42,7 @@ const REFRESH_NOTE = 'Refreshes every 10 min';
 function GemCount({ gems, large = false }: { gems: number; large?: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full bg-white/85 font-semibold text-[#2fbb8f] shadow-[inset_0_1px_0_#fff,0_2px_8px_-4px_rgba(47,187,143,0.4)] ${
+      className={`inline-flex items-center gap-1.5 rounded-full bg-white/85 font-display font-semibold text-[#2fbb8f] shadow-[inset_0_1px_0_#fff,0_2px_8px_-4px_rgba(47,187,143,0.4)] ${
         large ? 'px-3.5 py-1.5 text-base' : 'px-3 py-1 text-sm'
       }`}
     >
