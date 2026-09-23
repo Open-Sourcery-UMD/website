@@ -135,7 +135,7 @@ async function computeFromProfile(
   if (shields > 0) {
     totalGems += shields;
     actions.push({
-      label: `Caught ${shields} flying Gemshield${shields !== 1 ? "s" : ""}`,
+      label: `Caught ${shields} Flying Gemshield${shields !== 1 ? "s" : ""}`,
       gems: SHIELD_GEM_VALUE,
       unit: "shield",
     });

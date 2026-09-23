@@ -7,13 +7,16 @@ import {
 } from "../src/lib/githubApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
-const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+// Quiet for this long on a project earns a nudge, and at most one nudge
+// per person per fortnight
+const INACTIVE_DAYS = 30;
+const REMINDER_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 async function main() {
   const now = new Date();
-  const fourteenDaysAgo = new Date(now.getTime() - FOURTEEN_DAYS_MS);
-  const sevenDaysAgo = new Date(now.getTime() - SEVEN_DAYS_MS);
+  const inactiveSince = new Date(now.getTime() - INACTIVE_DAYS * DAY_MS);
+  const lastReminderBefore = new Date(now.getTime() - REMINDER_DAYS * DAY_MS);
 
   // Membership lives on GitHub - someone is on a project when they have access
   // to its repository (or a pending invitation) - so start from the projects
@@ -70,7 +73,7 @@ async function main() {
         GITHUB_ORG,
         repoName,
         login,
-        fourteenDaysAgo
+        inactiveSince
       );
 
       if (commitCount > 0) continue; // User is active
@@ -80,7 +83,7 @@ async function main() {
         || (userData.lastWarningTime instanceof Date ? userData.lastWarningTime : null)
         || new Date(0);
 
-      if (lastWarning > sevenDaysAgo) continue; // Already warned recently
+      if (lastWarning > lastReminderBefore) continue; // Already warned recently
 
       // Send warning email
       console.log(
@@ -90,7 +93,7 @@ async function main() {
         [userData.email],
         `Inactivity Warning - ${project.projectName}`,
         `Hi ${userData.firstName},\n\n` +
-          `We noticed you haven't made any commits to ${project.projectName} in the last 14 days. ` +
+          `We noticed you haven't made any commits to ${project.projectName} in the last ${INACTIVE_DAYS} days. ` +
           `Please make a contribution soon or reach out to your team lead if you need help.\n\n` +
           `- Open Sourcery`
       );
