@@ -30,27 +30,9 @@ function OrgChart() {
     <figure aria-label="Open Sourcery's structure" className="flex flex-col items-center">
       <div className={plain}>Open Sourcery Leadership</div>
       <div className={stem} />
-
-      {/* Two equal columns; the bar runs between their centres */}
-      <div className="relative grid w-full max-w-md grid-cols-2 gap-6">
-        <span
-          aria-hidden
-          className="absolute top-0 h-px bg-graphite/25"
-          style={{ left: 'calc((100% - 1.5rem) / 4)', right: 'calc((100% - 1.5rem) / 4)' }}
-        />
-
-        <div className="flex flex-col items-center">
-          <div className={stem} />
-          <div className={you}>Lead Developers (you)</div>
-          <div className={stem} />
-          <div className={plain}>Developers</div>
-        </div>
-
-        <div className="flex flex-col items-center">
-          <div className={stem} />
-          <div className={plain}>Committees</div>
-        </div>
-      </div>
+      <div className={you}>Lead Developers (you)</div>
+      <div className={stem} />
+      <div className={plain}>Developers</div>
     </figure>
   );
 }
@@ -77,8 +59,8 @@ export default function LeadDeveloperGuidePage() {
     >
       <GuideSection id="role" title="Your Role & Responsibilities">
         <p>
-          Within Open Sourcery, leadership sits at the top of the org, with Lead Devs and
-          Committees both reporting up to leadership, and Developers working under their Lead Dev.
+          Within Open Sourcery, leadership sits at the top of the org, with Lead Devs reporting up
+          to leadership, and Developers working under their Lead Dev.
         </p>
         <OrgChart />
         <GuideTopic title="As a Lead Dev, your responsibilities are to:">
