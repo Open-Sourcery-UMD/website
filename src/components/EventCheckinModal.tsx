@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useBodyScrollLock } from '@hooks/useBodyScrollLock';
 import { CalendarEvent } from '@/types/events';
 import { useAuth } from '@context/AuthContext';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
@@ -22,6 +23,9 @@ export default function EventCheckinModal({
   setCheckedInLocally,
 }: EventCheckinModalProps) {
   const { firebaseUser, firestoreUser } = useAuth();
+
+  // The page behind stays put while this is open
+  useBodyScrollLock(true);
 
   const [status, setStatus] = useState<'loading' | 'error' | 'idle'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -64,11 +68,11 @@ export default function EventCheckinModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/60"
       onClick={onClose}
     >
       <div
-        className="surface border rounded-2xl p-8 max-w-md w-full mx-4"
+        className="surface border rounded-2xl p-8 max-w-md w-full mx-4 max-h-[85dvh] overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-2xl font-bold text-graphite mb-2">

@@ -11,6 +11,7 @@ import { getGitHubUser } from "@lib/githubService";
 import { checkDiscordUsername, DISCORD_NOT_FOUND_HINT } from "@lib/discordService";
 import { leaveProject, withdrawProposal } from "@/lib/projectService";
 import { useUserProjects } from "@hooks/useUserProjects";
+import { useBodyScrollLock } from "@hooks/useBodyScrollLock";
 import {
   UNSAVED_CHANGES_MESSAGE,
   useUnsavedChangesWarning,
@@ -94,6 +95,9 @@ export default function SettingsPage() {
   // Set once the account is gone, so the signed-out redirect below doesn't
   // send them to sign-up instead of home
   const accountDeleted = useRef(false);
+
+  // The page behind stays put while the delete dialog is open
+  useBodyScrollLock(showDeleteDialog);
 
   // Initialize form from AuthContext (single source of truth)
   useEffect(() => {
@@ -740,13 +744,13 @@ export default function SettingsPage() {
 
     {showDeleteDialog && (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/50 p-4"
         onClick={() => !deleting && setShowDeleteDialog(false)}
       >
         <form
           onSubmit={handleDeleteAccount}
           onClick={(event) => event.stopPropagation()}
-          className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl"
+          className="w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain bg-white rounded-2xl p-6 shadow-xl"
         >
           <h3 className="text-xl font-semibold text-black mb-2">Delete your account?</h3>
           <p className="text-sm text-gray-600 mb-4">

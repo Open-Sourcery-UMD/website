@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useBodyScrollLock } from '@hooks/useBodyScrollLock';
 import { Project, TECHNOLOGIES, YEAR_LABELS } from '@data';
 import {
   ProjectTeamMember,
@@ -58,6 +59,9 @@ const ProjectSettingsModal = ({
     project.yearRange?.[1] ?? YEAR_LABELS.length - 1
   );
   const [newLeadUid, setNewLeadUid] = useState('');
+
+  // The page behind stays put while this is open
+  useBodyScrollLock(true);
 
   const [saving, setSaving] = useState(false);
   const [transferring, setTransferring] = useState(false);
@@ -136,11 +140,13 @@ const ProjectSettingsModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/70 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto surface border rounded-xl p-6"
+        // dvh, so the browser's own bars don't push the dialog off screen;
+        // overscroll-contain keeps a flick at either end from reaching the page
+        className="w-full max-w-2xl max-h-[85dvh] overflow-y-auto overscroll-contain surface border rounded-xl p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-6">
