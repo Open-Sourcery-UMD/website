@@ -109,7 +109,7 @@ export default function DeveloperGuidePage() {
         </GuideTopic>
         <GuideTopic title="Hack Sessions">
           <p>
-            Hack sessions run Monday evenings and give your team dedicated time to work on your
+            Hack sessions run regularly and give your team dedicated time to work on your
             project together, a great chance to unblock each other and ship features.
           </p>
         </GuideTopic>

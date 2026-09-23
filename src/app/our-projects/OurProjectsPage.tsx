@@ -17,11 +17,20 @@ import {
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || 'Open-Sourcery-UMD';
 
-function sortBySpotsRemaining(projects: Project[]): Project[] {
+/**
+ * Most open slots first, so the teams looking for people lead. Ties go to the
+ * smaller team, then to the project's name.
+ */
+function sortForDisplay(projects: Project[]): Project[] {
   return [...projects].sort((projA, projB) => {
     const projASpotsRemaining = projA.maxTeamSize - projA.currentTeamSize;
     const projBSpotsRemaining = projB.maxTeamSize - projB.currentTeamSize;
-    return projBSpotsRemaining - projASpotsRemaining;
+
+    return (
+      projBSpotsRemaining - projASpotsRemaining ||
+      projA.maxTeamSize - projB.maxTeamSize ||
+      projA.projectName.localeCompare(projB.projectName)
+    );
   });
 }
 
@@ -60,7 +69,7 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
         getProjectLeads(),
       ]);
 
-      setProjects(sortBySpotsRemaining(data));
+      setProjects(sortForDisplay(data));
       setLeads(projectLeads);
     } catch (err) {
       console.error('Error fetching projects:', err);
