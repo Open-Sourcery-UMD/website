@@ -12,7 +12,7 @@
  */
 import { DocumentData } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
-import { BOARD_MEMBERS, GEM_VALUES, getSemesterStart } from "@/data";
+import { BOARD_MEMBERS, CLUB_TIME_ZONE, GEM_VALUES, getSemesterStart } from "@/data";
 import {
   getMergedPRsInOtherReposBatch,
   getRepositoryMembership,
@@ -351,11 +351,8 @@ export interface ShieldGemResult {
 
 /**
  * The day a shield gem counts towards, in the club's own time zone, so the
- * five reset at midnight in Maryland rather than at 7 or 8pm the evening
- * before. en-CA formats as YYYY-MM-DD.
+ * five reset at midnight in Maryland. en-CA formats as YYYY-MM-DD.
  */
-const CLUB_TIME_ZONE = 'America/New_York';
-
 function today(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: CLUB_TIME_ZONE }).format(new Date());
 }

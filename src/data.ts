@@ -1,16 +1,73 @@
 /**
+ * The club's time zone. Semesters and daily caps turn over at midnight here,
+ * not wherever the server happens to be running.
+ */
+export const CLUB_TIME_ZONE = 'America/New_York';
+
+/** A moment's calendar date in the club's time zone. en-CA formats YYYY-MM-DD. */
+function clubDateParts(instant: Date): { year: number; month: number; day: number } {
+  const [year, month, day] = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CLUB_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(instant)
+    .split('-')
+    .map(Number);
+  return { year, month: month - 1, day };
+}
+
+/** How far the club's clock sits from UTC at a given moment, in milliseconds */
+function clubOffset(instant: number): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: CLUB_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(instant));
+
+  const field: Record<string, number> = {};
+  for (const part of parts) field[part.type] = Number(part.value);
+
+  const asIfUTC = Date.UTC(
+    field.year,
+    field.month - 1,
+    field.day,
+    field.hour % 24, // some platforms write midnight as hour 24
+    field.minute,
+    field.second
+  );
+  return asIfUTC - instant;
+}
+
+/** The instant midnight arrives in the club's time zone on a given date */
+function clubMidnight(year: number, month: number, day: number): Date {
+  const utcMidnight = Date.UTC(year, month, day);
+  // Shift by the offset, then again by the offset where that lands, in case a
+  // daylight saving change falls between the two
+  const firstPass = utcMidnight - clubOffset(utcMidnight);
+  return new Date(utcMidnight - clubOffset(firstPass));
+}
+
+/**
  * Start of the semester currently in progress, so gem counts reset each term.
- * The fall semester starts September 1 and the spring semester January 30;
- * before January 30 we're still in the term that began the previous September.
+ * Fall starts August 15 and spring January 15, both at midnight in the club's
+ * own time zone; before January 15 we're still in the term that began the
+ * previous August.
  */
 export function getSemesterStart(now: Date = new Date()): Date {
-  const year = now.getFullYear();
-  const fallStart = new Date(year, 8, 1); // September 1
-  const springStart = new Date(year, 0, 30); // January 30
+  const { year } = clubDateParts(now);
+  const fallStart = clubMidnight(year, 7, 15); // August 15
+  const springStart = clubMidnight(year, 0, 15); // January 15
 
   if (now >= fallStart) return fallStart;
   if (now >= springStart) return springStart;
-  return new Date(year - 1, 8, 1);
+  return clubMidnight(year - 1, 7, 15);
 }
 
 /**
@@ -18,8 +75,8 @@ export function getSemesterStart(now: Date = new Date()): Date {
  * belongs to the previous fall, so it's named after the year that began in.
  */
 export function getCurrentSemester(now: Date = new Date()): string {
-  const start = getSemesterStart(now);
-  return `${start.getMonth() === 8 ? 'Fall' : 'Spring'} ${start.getFullYear()}`;
+  const { year, month } = clubDateParts(getSemesterStart(now));
+  return `${month === 7 ? 'Fall' : 'Spring'} ${year}`;
 }
 
 // Class standing, as used by a project's yearRange

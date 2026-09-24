@@ -113,6 +113,12 @@ const MINI_HIT_PADDING = 22;
 const FREEZE_MS = 5000;
 /** The day's allowance, mirroring the server's cap */
 const SHIELD_GEMS_PER_DAY = 5;
+/**
+ * The chance a shield comes up green, indexed by how many gems they've caught
+ * today - the first is a coin flip, and they thin out from there. Only the
+ * three quarters that aren't black draw from this.
+ */
+const GREEN_ODDS = [1 / 2, 1 / 4, 1 / 8, 1 / 8, 1 / 8];
 
 interface Flight {
   id: number;
@@ -418,11 +424,10 @@ export default function HeroShield() {
     /*
      * With nothing left to win or lose - signed out, or the day's five gems
      * already caught - every shield is blue. Otherwise a quarter are black;
-     * of the rest, the day's first green comes at even odds and the
-     * remaining four at one in four.
+     * of the rest, green gets rarer as the day's gems are caught.
      */
     const nothingAtStake = !firebaseUser || earnedToday >= SHIELD_GEMS_PER_DAY;
-    const greenChance = earnedToday === 0 ? 0.5 : 0.25;
+    const greenChance = GREEN_ODDS[earnedToday] ?? GREEN_ODDS[GREEN_ODDS.length - 1];
     const color: ShieldColor = nothingAtStake
       ? 'blue'
       : Math.random() < 0.25
