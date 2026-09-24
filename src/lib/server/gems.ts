@@ -194,7 +194,7 @@ async function computeFromProfile(
       if (activity.mergedPRs > 0) {
         totalGems += activity.mergedPRs * GEM_VALUES.prIntoOwnProject;
         actions.push({
-          label: `Merged ${activity.mergedPRs} PR${activity.mergedPRs !== 1 ? "s" : ""} into '${repositoryName}' (your project)`,
+          label: `Created ${activity.mergedPRs} PR${activity.mergedPRs !== 1 ? "s" : ""} merged into '${repositoryName}' (your project)`,
           gems: GEM_VALUES.prIntoOwnProject,
           unit: "PR",
         });
@@ -212,7 +212,7 @@ async function computeFromProfile(
           : GEM_VALUES.prIntoPublicRepo;
         totalGems += gems;
         const mergedDate = pr.mergedAt ? formatDate(pr.mergedAt) : "unknown date";
-        actions.push({ label: `Merged a PR into '${pr.repo}' on ${mergedDate}`, gems });
+        actions.push({ label: `Created a PR merged into '${pr.repo}' on ${mergedDate}`, gems });
       }
     } else {
       console.error(`Outside PRs unavailable for ${login}; scored without them`);

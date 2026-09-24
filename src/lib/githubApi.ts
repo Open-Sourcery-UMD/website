@@ -564,8 +564,9 @@ const GRAPHQL_SEARCH_BATCH = 25;
 const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 
 /**
- * Merged PRs into public repositories for many users at once, each excluding
- * the repositories listed for them (their own projects, counted separately).
+ * Merged PRs into public repositories for many users at once, leaving out
+ * the repositories listed for them (their own projects, counted separately)
+ * and everything under their own account.
  *
  * REST search allows 30 requests a minute, so a search per member silently
  * dropped most people's results - 76 of 105 refused on one leaderboard run.
@@ -611,6 +612,9 @@ export async function getMergedPRsInOtherReposBatch(
             "is:merged",
             "is:public",
             `merged:>=${sinceDate}`,
+            // Repositories the author owns don't count: merging your own PR
+            // into your own repo takes nobody else's review
+            `-user:${login}`,
             ...excludeRepos.filter(Boolean).map((repo) => `-repo:${repo}`),
           ];
           return (

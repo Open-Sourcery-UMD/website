@@ -156,19 +156,19 @@ export default function GemsPage({ semester }: { semester: string }) {
             <ul className="text-black space-y-3 flex-grow">
               <li className="flex items-start gap-3">
                 <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.issueInOwnProject}</span>
-                <span>Earn {GEM_VALUES.issueInOwnProject} Gems for opening an issue in your project</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOwnProject}</span>
-                <span>Earn {GEM_VALUES.prIntoOwnProject} Gems for getting a PR merged into your project</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOtherProject}</span>
-                <span>Earn {GEM_VALUES.prIntoOtherProject} Gems for getting a PR merged into another Open Sourcery project</span>
+                <span>Earn {GEM_VALUES.issueInOwnProject} Gems for opening an issue in your Open Sourcery project repo</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoPublicRepo}</span>
-                <span>Earn {GEM_VALUES.prIntoPublicRepo} Gems for getting a PR merged into a public repository</span>
+                <span>Earn {GEM_VALUES.prIntoPublicRepo} Gems for creating a pull request merged into a public repo (outside Open Sourcery)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOwnProject}</span>
+                <span>Earn {GEM_VALUES.prIntoOwnProject} Gems for creating a pull request merged into your Open Sourcery project repo</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOtherProject}</span>
+                <span>Earn {GEM_VALUES.prIntoOtherProject} Gems for creating a pull request merged into another Open Sourcery project repo</span>
               </li>
             </ul>
           </div>

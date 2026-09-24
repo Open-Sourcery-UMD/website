@@ -121,12 +121,12 @@ export const GEM_VALUES = {
   /** Every other event - socials, workshops and so on */
   otherEvent: 100,
   /** Each issue opened in a project you're on */
-  issueInOwnProject: 20,
+  issueInOwnProject: 10,
   /** Each PR merged into a project you're on */
   prIntoOwnProject: 30,
   /** Each PR merged into another Open Sourcery project (any org repository) */
   prIntoOtherProject: 50,
-  /** Each PR merged into a public repository outside Open Sourcery */
+  /** Each PR merged into someone else's public repository outside Open Sourcery */
   prIntoPublicRepo: 10,
 } as const;
 
