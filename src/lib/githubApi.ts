@@ -663,6 +663,103 @@ export async function getMergedPRsInOtherReposBatch(
 }
 
 /**
+ * Pull requests fetched per page when counting reviews, and the most pages
+ * we'll walk back through for one repository
+ */
+const REVIEW_PAGE_SIZE = 50;
+const REVIEW_MAX_PAGES = 10;
+
+/**
+ * How many of their teammates' pull requests each person reviewed in a
+ * repository since a given date, keyed by lowercased login.
+ *
+ * Distinct pull requests, not review submissions: leaving five comments on
+ * one pull request is one review's worth of credit, not five. Reviews of
+ * one's own pull request don't count.
+ *
+ * Pull requests come back newest-updated first, and submitting a review bumps
+ * updated_at, so the walk stops at the first one that hasn't been touched
+ * since the window opened.
+ */
+export async function getReviewCountsForRepo(
+  repo: string,
+  since: Date
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const [owner, name] = repo.split("/");
+  if (!owner || !name) return counts;
+
+  const query = `
+    query($owner: String!, $name: String!, $size: Int!, $cursor: String) {
+      repository(owner: $owner, name: $name) {
+        pullRequests(first: $size, orderBy: { field: UPDATED_AT, direction: DESC }, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            updatedAt
+            author { login }
+            reviews(first: 100) { nodes { author { login } submittedAt } }
+          }
+        }
+      }
+    }`;
+
+  let cursor: string | null = null;
+
+  for (let page = 0; page < REVIEW_MAX_PAGES; page++) {
+    const response = await fetch(`${GITHUB_API}/graphql`, {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query,
+        variables: { owner, name, size: REVIEW_PAGE_SIZE, cursor },
+      }),
+    });
+
+    // Annotated, or the cursor assigned at the foot of the loop makes the
+    // request's own type circular
+    const body: any = await response.json();
+    const pullRequests: any = body?.data?.repository?.pullRequests;
+    if (!response.ok || !pullRequests) {
+      // A proposed project has no repository yet, which isn't worth shouting
+      // about on every leaderboard build
+      const missing = body?.errors?.every((e: any) => e?.type === "NOT_FOUND");
+      if (!missing) {
+        console.error(
+          `Review counts failed for ${repo}: ${response.status} ` +
+            JSON.stringify(body?.errors ?? body).slice(0, 200)
+        );
+      }
+      return counts;
+    }
+
+    for (const pr of pullRequests.nodes ?? []) {
+      // Ordered by updated_at, so this one and everything after it are older
+      // than the window
+      if (new Date(pr.updatedAt) < since) return counts;
+
+      const author = pr.author?.login?.toLowerCase();
+      const reviewers = new Set<string>();
+
+      for (const review of pr.reviews?.nodes ?? []) {
+        const reviewer = review?.author?.login?.toLowerCase();
+        if (!reviewer || reviewer === author) continue;
+        if (!review.submittedAt || new Date(review.submittedAt) < since) continue;
+        reviewers.add(reviewer);
+      }
+
+      for (const reviewer of reviewers) {
+        counts.set(reviewer, (counts.get(reviewer) ?? 0) + 1);
+      }
+    }
+
+    if (!pullRequests.pageInfo?.hasNextPage) break;
+    cursor = (pullRequests.pageInfo.endCursor as string | null) ?? null;
+  }
+
+  return counts;
+}
+
+/**
  * Gets the number of commits by a user in a repo since a given date
  */
 export async function getUserCommitsSince(

@@ -36,6 +36,7 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
 export interface ShieldGemResult {
   awarded: boolean;
   earnedToday: number;
+  capReached: boolean;
 }
 
 /** Claims the gem for catching a green shield on the home page */
@@ -49,9 +50,18 @@ export async function catchShieldGem(): Promise<ShieldGemResult> {
   return response.json();
 }
 
-/** Shields caught today, which sets the odds of the next green one */
-export async function getShieldsToday(): Promise<number> {
+export interface ShieldGemStatus {
+  earnedToday: number;
+  capReached: boolean;
+}
+
+/** Where they stand on shields: the day's count, and the semester's cap */
+export async function getShieldsToday(): Promise<ShieldGemStatus> {
   const response = await authorizedFetch('/api/gems?action=shieldsToday');
   if (!response.ok) throw new Error(`Failed to load shield count: ${response.status}`);
-  return (await response.json()).earnedToday ?? 0;
+  const body = await response.json();
+  return {
+    earnedToday: body.earnedToday ?? 0,
+    capReached: Boolean(body.capReached),
+  };
 }

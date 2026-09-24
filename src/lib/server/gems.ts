@@ -12,20 +12,25 @@
  */
 import { DocumentData } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
-import { BOARD_MEMBERS, CLUB_TIME_ZONE, GEM_VALUES, getSemesterStart } from "@/data";
+import {
+  CLUB_TIME_ZONE,
+  GEM_VALUES,
+  getSemesterStart,
+  publicRepoPRValue,
+  SHIELD_GEM_VALUE,
+  SHIELD_GEMS_PER_DAY,
+  SHIELD_GEMS_PER_SEMESTER,
+} from "@/data";
 import {
   getMergedPRsInOtherReposBatch,
   getRepositoryMembership,
+  getReviewCountsForRepo,
   getUserRepositoryActivity,
   OutsidePR,
 } from "@/lib/githubApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 const SPECIAL_EVENT_NAMES = ["hack session", "gbm", "general body meeting"];
-
-// The home page easter egg: one gem a shield, at most five a day
-export const SHIELD_GEM_VALUE = 1;
-export const SHIELD_GEMS_PER_DAY = 5;
 
 const LEADERBOARD_SIZE = 5;
 const LEADERBOARD_TTL_MS = 10 * 60_000;
@@ -38,7 +43,7 @@ export interface GemAction {
   /** Gems per unit - per issue or PR for aggregated lines, else the line's total */
   gems: number;
   /** Set on lines that aggregate several of the same thing */
-  unit?: "issue" | "PR" | "shield";
+  unit?: "issue" | "PR" | "review" | "shield";
 }
 
 export interface GemBreakdown {
@@ -58,12 +63,28 @@ export interface LeaderboardEntry {
 /** GitHub login (lowercased) -> the project repositories it belongs to */
 type MembershipIndex = Map<string, string[]>;
 
-async function buildMembershipIndex(): Promise<MembershipIndex> {
+/** Repository -> lowercased login -> teammates' pull requests they reviewed */
+type ReviewIndex = Map<string, Map<string, number>>;
+
+/**
+ * Everything about the club's project repositories that scoring needs, read
+ * once and shared by every member of a leaderboard run rather than fetched
+ * per person.
+ */
+interface ProjectIndex {
+  membership: MembershipIndex;
+  reviews: ReviewIndex;
+}
+
+/** Every repository the club has a project for */
+async function projectRepoNames(): Promise<string[]> {
   const snapshot = await adminDb().collection("projects").get();
-  const repos = Array.from(
+  return Array.from(
     new Set(snapshot.docs.map((doc) => doc.data().repositoryName).filter(Boolean))
   ) as string[];
+}
 
+async function buildMembershipIndex(repos: string[]): Promise<MembershipIndex> {
   const index: MembershipIndex = new Map();
 
   await Promise.all(
@@ -79,6 +100,22 @@ async function buildMembershipIndex(): Promise<MembershipIndex> {
         }
       } catch (error) {
         console.error(`Couldn't read membership of ${repo} for gems:`, error);
+      }
+    })
+  );
+
+  return index;
+}
+
+async function buildReviewIndex(repos: string[], startDate: Date): Promise<ReviewIndex> {
+  const index: ReviewIndex = new Map();
+
+  await Promise.all(
+    repos.map(async (repo) => {
+      try {
+        index.set(repo, await getReviewCountsForRepo(`${GITHUB_ORG}/${repo}`, startDate));
+      } catch (error) {
+        console.error(`Couldn't read reviews in ${repo} for gems:`, error);
       }
     })
   );
@@ -122,7 +159,7 @@ function fetchOutsidePRs(
 
 async function computeFromProfile(
   profile: DocumentData,
-  index: MembershipIndex,
+  index: ProjectIndex,
   startDate: Date,
   // Pre-fetched in bulk; undefined means the lookup failed for this login
   outsidePRs: OutsidePR[] | undefined
@@ -172,7 +209,7 @@ async function computeFromProfile(
   if (login) {
     // Every project repository they have access to - usually one - looked
     // up together. getUserRepositoryActivity never throws: a failure counts 0.
-    const projectRepos = index.get(login.toLowerCase()) ?? [];
+    const projectRepos = index.membership.get(login.toLowerCase()) ?? [];
     const activities = await Promise.all(
       projectRepos.map((repositoryName) =>
         getUserRepositoryActivity(login, `${GITHUB_ORG}/${repositoryName}`, startDate)
@@ -199,17 +236,34 @@ async function computeFromProfile(
           unit: "PR",
         });
       }
+
+      const reviewed = index.reviews.get(repositoryName)?.get(login.toLowerCase()) ?? 0;
+      if (reviewed > 0) {
+        totalGems += reviewed * GEM_VALUES.reviewOnTeammatePR;
+        actions.push({
+          label: `Reviewed ${reviewed} teammate${reviewed !== 1 ? "s'" : "'s"} PR${reviewed !== 1 ? "s" : ""} in '${repositoryName}'`,
+          gems: GEM_VALUES.reviewOnTeammatePR,
+          unit: "review",
+        });
+      }
     });
 
     // PRs merged elsewhere count whether or not they're on a project; their
     // own projects were excluded from the search since they're counted above
     if (outsidePRs) {
-      for (const pr of outsidePRs) {
-        // Another Open Sourcery project is worth more than an arbitrary repo;
-        // their own projects were excluded from this list already
+      // Oldest first, so the tiers fill in the order the work happened and a
+      // new pull request never changes what an earlier one was worth
+      const inOrder = [...outsidePRs].sort(
+        (a, b) => new Date(a.mergedAt).getTime() - new Date(b.mergedAt).getTime()
+      );
+      let outsideSoFar = 0;
+
+      for (const pr of inOrder) {
+        // Another Open Sourcery project is worth a flat, higher rate and
+        // doesn't use up a tier; their own projects were excluded already
         const gems = isOrgRepository(pr.repo)
           ? GEM_VALUES.prIntoOtherProject
-          : GEM_VALUES.prIntoPublicRepo;
+          : publicRepoPRValue(outsideSoFar++);
         totalGems += gems;
         const mergedDate = pr.mergedAt ? formatDate(pr.mergedAt) : "unknown date";
         actions.push({ label: `Created a PR merged into '${pr.repo}' on ${mergedDate}`, gems });
@@ -233,7 +287,9 @@ async function computeFromProfile(
 function shieldGemsThisSemester(profile: DocumentData, startDate: Date): number {
   const shields = profile.shieldGems;
   if (!shields || shields.semester !== startDate.toISOString()) return 0;
-  return Number(shields.total) || 0;
+  // Awards stop at the cap, but old records from before it was introduced
+  // can still hold more
+  return Math.min(Number(shields.total) || 0, SHIELD_GEMS_PER_SEMESTER);
 }
 
 /**
@@ -241,53 +297,65 @@ function shieldGemsThisSemester(profile: DocumentData, startDate: Date): number 
  * that earned them
  */
 export async function computeGemBreakdown(uid: string): Promise<GemBreakdown> {
-  // The membership index doesn't depend on the profile, so build it meanwhile
-  const [snapshot, index] = await Promise.all([
+  const startDate = getSemesterStart();
+
+  // Neither the repositories nor their membership depend on the profile, so
+  // they're read while the profile is on its way
+  const [snapshot, membership] = await Promise.all([
     adminDb().collection("users").doc(uid).get(),
-    buildMembershipIndex(),
+    projectRepoNames().then(buildMembershipIndex),
   ]);
   if (!snapshot.exists) return { totalGems: 0, actions: [] };
 
   const profile = snapshot.data()!;
-  const startDate = getSemesterStart();
-
   const login = (profile.gitHubUsername || "").trim();
-  const outside = login
-    ? await fetchOutsidePRs([login], index, startDate)
-    : new Map<string, OutsidePR[]>();
 
-  return computeFromProfile(profile, index, startDate, outside.get(login.toLowerCase()));
+  // Only this person's own projects are scored, so only those are read - the
+  // leaderboard is the one that needs every repository
+  const [outside, reviews] = await Promise.all([
+    login
+      ? fetchOutsidePRs([login], membership, startDate)
+      : Promise.resolve(new Map<string, OutsidePR[]>()),
+    buildReviewIndex(membership.get(login.toLowerCase()) ?? [], startDate),
+  ]);
+
+  return computeFromProfile(
+    profile,
+    { membership, reviews },
+    startDate,
+    outside.get(login.toLowerCase())
+  );
 }
 
 async function computeLeaderboard(): Promise<LeaderboardEntry[]> {
-  const [users, index] = await Promise.all([
+  const startDate = getSemesterStart();
+
+  const [users, repos] = await Promise.all([
     // Only what scoring needs - never emails or anything else private
     adminDb()
       .collection("users")
       .select("firstName", "lastName", "gitHubUsername", "eventsAttended", "shieldGems")
       .get(),
-    buildMembershipIndex(),
+    projectRepoNames(),
   ]);
 
-  const boardMembers = new Set(BOARD_MEMBERS);
-  const candidates = users.docs.filter((doc) => {
-    const { firstName, lastName } = doc.data();
-    return !boardMembers.has(`${firstName} ${lastName}`);
-  });
-
-  const startDate = getSemesterStart();
+  const [membership, reviews] = await Promise.all([
+    buildMembershipIndex(repos),
+    buildReviewIndex(repos, startDate),
+  ]);
+  const index: ProjectIndex = { membership, reviews };
 
   // Everyone's outside PRs in a few batched requests, rather than a search
   // per member that the rate limit would mostly refuse
-  const logins = candidates
+  const logins = users.docs
     .map((doc) => (doc.data().gitHubUsername || "").trim())
     .filter(Boolean);
-  const outside = await fetchOutsidePRs(logins, index, startDate);
+  const outside = await fetchOutsidePRs(logins, index.membership, startDate);
 
   const scored: LeaderboardEntry[] = [];
 
-  for (let i = 0; i < candidates.length; i += LEADERBOARD_CONCURRENCY) {
-    const batch = candidates.slice(i, i + LEADERBOARD_CONCURRENCY);
+  for (let i = 0; i < users.docs.length; i += LEADERBOARD_CONCURRENCY) {
+    const batch = users.docs.slice(i, i + LEADERBOARD_CONCURRENCY);
     const results = await Promise.all(
       batch.map(async (doc) => {
         const data = doc.data();
@@ -343,10 +411,12 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
 }
 
 export interface ShieldGemResult {
-  /** False once the day's five are gone */
+  /** False once the day's five, or the semester's hundred, are gone */
   awarded: boolean;
   /** Gems caught today, after this one */
   earnedToday: number;
+  /** The semester's hundred are now all caught, this one included */
+  capReached: boolean;
 }
 
 /**
@@ -368,40 +438,58 @@ export async function awardShieldGem(uid: string): Promise<ShieldGemResult> {
   const semester = getSemesterStart().toISOString();
   const day = today();
 
-  const { awarded, earnedToday } = await adminDb().runTransaction(async (transaction) => {
+  return adminDb().runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref);
-    if (!snapshot.exists) return { awarded: false, earnedToday: 0 };
+    if (!snapshot.exists) return { awarded: false, earnedToday: 0, capReached: false };
 
     const shields = snapshot.data()!.shieldGems;
     const sameSemester = shields?.semester === semester;
     const sameDay = sameSemester && shields?.day === day;
 
     const earned = sameDay ? Number(shields.today) || 0 : 0;
-    if (earned >= SHIELD_GEMS_PER_DAY) return { awarded: false, earnedToday: earned };
+    const earnedThisSemester = sameSemester ? Number(shields.total) || 0 : 0;
+    const capReached = earnedThisSemester >= SHIELD_GEMS_PER_SEMESTER;
 
+    if (capReached || earned >= SHIELD_GEMS_PER_DAY) {
+      return { awarded: false, earnedToday: earned, capReached };
+    }
+
+    const total = earnedThisSemester + SHIELD_GEM_VALUE;
     transaction.set(
       ref,
-      {
-        shieldGems: {
-          semester,
-          day,
-          today: earned + 1,
-          total: (sameSemester ? Number(shields.total) || 0 : 0) + SHIELD_GEM_VALUE,
-        },
-      },
+      { shieldGems: { semester, day, today: earned + 1, total } },
       { merge: true }
     );
-    return { awarded: true, earnedToday: earned + 1 };
-  });
 
-  return { awarded, earnedToday };
+    // Said on the hundredth itself, so the page doesn't have to find out by
+    // being refused the next one
+    return {
+      awarded: true,
+      earnedToday: earned + 1,
+      capReached: total >= SHIELD_GEMS_PER_SEMESTER,
+    };
+  });
 }
 
-/** How many shields they've caught today, for the odds of the next one */
-export async function getShieldGemsToday(uid: string): Promise<number> {
+export interface ShieldGemStatus {
+  /** Caught today, which sets the odds of the next green shield */
+  earnedToday: number;
+  /** The semester's hundred are all caught, so there's nothing left to win */
+  capReached: boolean;
+}
+
+/** Where they stand on shields, for the home page easter egg */
+export async function getShieldGemsToday(uid: string): Promise<ShieldGemStatus> {
   const snapshot = await adminDb().collection("users").doc(uid).get();
   const shields = snapshot.data()?.shieldGems;
   const semester = getSemesterStart().toISOString();
-  if (!shields || shields.semester !== semester || shields.day !== today()) return 0;
-  return Number(shields.today) || 0;
+
+  if (!shields || shields.semester !== semester) {
+    return { earnedToday: 0, capReached: false };
+  }
+
+  return {
+    earnedToday: shields.day === today() ? Number(shields.today) || 0 : 0,
+    capReached: (Number(shields.total) || 0) >= SHIELD_GEMS_PER_SEMESTER,
+  };
 }

@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(await computeGemBreakdown(uid));
       }
 
-      // How many shields they've caught today, for the home page easter egg
+      // Where they stand on shields, for the home page easter egg
       case "shieldsToday": {
         const uid = await requireUser(request);
-        return NextResponse.json({ earnedToday: await getShieldGemsToday(uid) });
+        return NextResponse.json(await getShieldGemsToday(uid));
       }
 
       // Members only: it lists other students by name and GitHub

@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { FaGem } from 'react-icons/fa';
 import { useAuth } from '@context/AuthContext';
 import { catchShieldGem, getShieldsToday } from '@/lib/gemService';
+import { SHIELD_GEMS_PER_DAY, SHIELD_GEMS_PER_SEMESTER } from '@data';
 
 /**
  * Motes falling from the crest.
@@ -111,8 +112,6 @@ const MINI_SIZE = 112;
 const MINI_HIT_PADDING = 22;
 /** The big crest sits out for this long after a black shield is popped */
 const FREEZE_MS = 5000;
-/** The day's allowance, mirroring the server's cap */
-const SHIELD_GEMS_PER_DAY = 5;
 /**
  * The chance a shield comes up green, indexed by how many gems they've caught
  * today - the first is a coin flip, and they thin out from there. Only the
@@ -321,7 +320,15 @@ const POPUP_SPARKLES = [
 ];
 
 /** Brief confirmation of a gem, at the top of the screen */
-function GemPopup({ earnedToday, onDone }: { earnedToday: number; onDone: () => void }) {
+function GemPopup({
+  earnedToday,
+  capReached,
+  onDone,
+}: {
+  earnedToday: number;
+  capReached?: boolean;
+  onDone: () => void;
+}) {
   return (
     // Its whole life is one animation, ending in a fade; when that ends, it
     // goes. The centring sits outside it, clear of the animated transform.
@@ -364,7 +371,9 @@ function GemPopup({ earnedToday, onDone }: { earnedToday: number; onDone: () => 
           <FaGem className="text-[#2fbb8f]" aria-hidden />
           <span className="text-[#2fbb8f]">+1 Gem</span>
           <span className="font-normal text-graphite-soft">
-            · {earnedToday}/{SHIELD_GEMS_PER_DAY} today
+            {capReached
+              ? `· all ${SHIELD_GEMS_PER_SEMESTER} caught this semester`
+              : `· ${earnedToday}/${SHIELD_GEMS_PER_DAY} today`}
           </span>
         </Link>
       </div>
@@ -377,10 +386,16 @@ export default function HeroShield() {
 
   const [flight, setFlight] = useState<Flight | null>(null);
   const [frozenUntil, setFrozenUntil] = useState(0);
-  const [gemPopup, setGemPopup] = useState<{ id: number; earnedToday: number } | null>(null);
+  const [gemPopup, setGemPopup] = useState<{
+    id: number;
+    earnedToday: number;
+    capReached?: boolean;
+  } | null>(null);
   // Shields caught today: sets the odds of the next green one, and turns the
   // crest's motes green once the day's five are in
   const [earnedToday, setEarnedToday] = useState(0);
+  // The semester's hundred are all caught, so every shield is blue from here
+  const [capReached, setCapReached] = useState(false);
 
   const miniRef = useRef<HTMLDivElement | null>(null);
   // The shield alone, so a pop fades it without taking the burst with it
@@ -404,10 +419,14 @@ export default function HeroShield() {
   useEffect(() => {
     if (!firebaseUser) {
       setEarnedToday(0);
+      setCapReached(false);
       return;
     }
     getShieldsToday()
-      .then(setEarnedToday)
+      .then((status) => {
+        setEarnedToday(status.earnedToday);
+        setCapReached(status.capReached);
+      })
       .catch((error) => console.error('Error loading caught shields:', error));
   }, [firebaseUser]);
 
@@ -422,11 +441,13 @@ export default function HeroShield() {
     if (flight || frozen) return;
 
     /*
-     * With nothing left to win or lose - signed out, or the day's five gems
-     * already caught - every shield is blue. Otherwise a quarter are black;
-     * of the rest, green gets rarer as the day's gems are caught.
+     * With nothing left to win or lose - signed out, the day's five gems
+     * already caught, or the semester's hundred spent - every shield is blue.
+     * Otherwise a quarter are black; of the rest, green gets rarer as the
+     * day's gems are caught.
      */
-    const nothingAtStake = !firebaseUser || earnedToday >= SHIELD_GEMS_PER_DAY;
+    const nothingAtStake =
+      !firebaseUser || capReached || earnedToday >= SHIELD_GEMS_PER_DAY;
     const greenChance = GREEN_ODDS[earnedToday] ?? GREEN_ODDS[GREEN_ODDS.length - 1];
     const color: ShieldColor = nothingAtStake
       ? 'blue'
@@ -467,11 +488,16 @@ export default function HeroShield() {
     try {
       const result = await catchShieldGem();
       setEarnedToday(result.earnedToday);
+      // Said on the hundredth itself, so no green shield is ever caught for
+      // nothing: from here every one of them is blue
+      if (result.capReached) setCapReached(true);
 
       setGemPopup((current) => {
         if (current?.id !== popupId) return current;
         // Nothing is said if the day's five turn out to be spent already
-        return result.awarded ? { ...current, earnedToday: result.earnedToday } : null;
+        return result.awarded
+          ? { ...current, earnedToday: result.earnedToday, capReached: result.capReached }
+          : null;
       });
     } catch (error) {
       console.error('Error claiming a gem:', error);
@@ -711,6 +737,7 @@ export default function HeroShield() {
         <GemPopup
           key={gemPopup.id}
           earnedToday={gemPopup.earnedToday}
+          capReached={gemPopup.capReached}
           onDone={() => setGemPopup(null)}
         />
       )}

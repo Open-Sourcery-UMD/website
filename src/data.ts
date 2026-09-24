@@ -172,20 +172,58 @@ export function formatYearRange(min: number, max: number): string {
  * Gems awarded for each kind of activity. The server's formula and the gems
  * page's explainer both read from here, so the two can't drift apart.
  */
+/**
+ * The home page easter egg: one gem a shield, at most five a day, and at most
+ * a hundred a semester. Five a day over a whole term would otherwise be worth
+ * more than anyone's project work, which would make clicking the crest the
+ * winning strategy rather than a bit of fun.
+ */
+export const SHIELD_GEM_VALUE = 1;
+export const SHIELD_GEMS_PER_DAY = 5;
+export const SHIELD_GEMS_PER_SEMESTER = 100;
+
 export const GEM_VALUES = {
   /** Hack Sessions and General Body Meetings */
   specialEvent: 50,
   /** Every other event - socials, workshops and so on */
-  otherEvent: 100,
+  otherEvent: 30,
   /** Each issue opened in a project you're on */
-  issueInOwnProject: 10,
+  issueInOwnProject: 5,
   /** Each PR merged into a project you're on */
-  prIntoOwnProject: 30,
+  prIntoOwnProject: 40,
+  /** Each of a teammate's pull requests you review in your project */
+  reviewOnTeammatePR: 15,
   /** Each PR merged into another Open Sourcery project (any org repository) */
-  prIntoOtherProject: 50,
-  /** Each PR merged into someone else's public repository outside Open Sourcery */
-  prIntoPublicRepo: 10,
+  prIntoOtherProject: 60,
 } as const;
+
+/**
+ * Merged pull requests into public repositories outside Open Sourcery are
+ * worth less as they pile up. The first few are the ones the club most wants
+ * to encourage, while a working maintainer's fiftieth of the semester
+ * shouldn't outweigh everyone else's term of project work.
+ *
+ * Each tier covers `count` pull requests at `gems` apiece, in the order they
+ * were merged. The last tier runs to the end of the semester.
+ */
+export const PUBLIC_REPO_PR_TIERS = [
+  { count: 5, gems: 15 },
+  { count: 10, gems: 7 },
+  { count: Infinity, gems: 3 },
+] as const;
+
+/**
+ * What a merged outside pull request is worth, given how many came before it
+ * this semester (0 for the first).
+ */
+export function publicRepoPRValue(precedingCount: number): number {
+  let remaining = precedingCount;
+  for (const tier of PUBLIC_REPO_PR_TIERS) {
+    if (remaining < tier.count) return tier.gems;
+    remaining -= tier.count;
+  }
+  return PUBLIC_REPO_PR_TIERS[PUBLIC_REPO_PR_TIERS.length - 1].gems;
+}
 
 /**
  * Why a lead can't leave their own project. Shared by the server, which
@@ -207,8 +245,6 @@ export function leadCannotDeleteMessage(projectName: string): string {
     `in your project's section.`
   );
 }
-
-export const BOARD_MEMBERS = ['Om Arya', 'Shreyas Thirumale', 'Sifene Fufa', 'Lina Hsu', 'Diksha Pal', 'Colin Kurniawan'];
 
 interface TechnologyGroup {
   header: string,

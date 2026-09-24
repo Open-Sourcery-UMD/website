@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { PageContainer, SectionContainer } from '@components/Container';
 import { useAuth } from '@context/AuthContext';
 import { computeGemCount, GemAction } from '@/lib/gemService';
-import { GEM_VALUES } from '@data';
+import { GEM_VALUES, PUBLIC_REPO_PR_TIERS } from '@data';
 import GemLeaderboard from '@components/GemLeaderboard';
 
 const ITEMS_PER_PAGE = 10;
@@ -47,7 +47,7 @@ export default function GemsPage({ semester }: { semester: string }) {
         <h1 className="text-blue-600 text-5xl md:text-7xl font-bold mb-4">Gems</h1>
         <p className="mb-10 text-black">
           Gems are how Open Sourcery celebrates members who show up and contribute. Earn them by
-          attending our events and getting your code merged into open-source projects, then see how
+          attending our events and making contributions to open-source projects, then see how
           you stack up on the leaderboard. Counts reset every semester, so everyone starts fresh
           in {semester}.
         </p>
@@ -156,19 +156,23 @@ export default function GemsPage({ semester }: { semester: string }) {
             <ul className="text-black space-y-3 flex-grow">
               <li className="flex items-start gap-3">
                 <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.issueInOwnProject}</span>
-                <span>Earn {GEM_VALUES.issueInOwnProject} Gems for opening an issue in your Open Sourcery project repo</span>
+                <span>Earn {GEM_VALUES.issueInOwnProject} Gems for opening an issue in your project</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoPublicRepo}</span>
-                <span>Earn {GEM_VALUES.prIntoPublicRepo} Gems for creating a pull request merged into a public repo (outside Open Sourcery)</span>
+                <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.reviewOnTeammatePR}</span>
+                <span>Earn {GEM_VALUES.reviewOnTeammatePR} Gems for reviewing a teammate&apos;s pull request</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOwnProject}</span>
-                <span>Earn {GEM_VALUES.prIntoOwnProject} Gems for creating a pull request merged into your Open Sourcery project repo</span>
+                <span>Earn {GEM_VALUES.prIntoOwnProject} Gems for creating a pull request that gets merged into your project</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="font-display text-ycs-blue font-bold mt-0.5">+{GEM_VALUES.prIntoOtherProject}</span>
-                <span>Earn {GEM_VALUES.prIntoOtherProject} Gems for creating a pull request merged into another Open Sourcery project repo</span>
+                <span>Earn {GEM_VALUES.prIntoOtherProject} Gems for creating a pull request that gets merged into another Open Sourcery project</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="font-display text-ycs-blue font-bold mt-0.5">+{PUBLIC_REPO_PR_TIERS[0].gems}</span>
+                <span>Earn {PUBLIC_REPO_PR_TIERS[0].gems} Gems for creating a pull request that gets merged into a public repository (outside Open Sourcery); your first {PUBLIC_REPO_PR_TIERS[0].count} of the semester, then {PUBLIC_REPO_PR_TIERS[1].gems} each for the next {PUBLIC_REPO_PR_TIERS[1].count} and {PUBLIC_REPO_PR_TIERS[2].gems} after that</span>
               </li>
             </ul>
           </div>
