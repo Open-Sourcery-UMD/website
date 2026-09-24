@@ -396,6 +396,9 @@ export default function HeroShield() {
   const [earnedToday, setEarnedToday] = useState(0);
   // The semester's hundred are all caught, so every shield is blue from here
   const [capReached, setCapReached] = useState(false);
+  // Their standing has come back from the server. Until it has, we don't know
+  // what's left to win, so nothing is offered that we might not honour.
+  const [shieldsKnown, setShieldsKnown] = useState(false);
 
   const miniRef = useRef<HTMLDivElement | null>(null);
   // The shield alone, so a pop fades it without taking the burst with it
@@ -415,20 +418,34 @@ export default function HeroShield() {
   // Their day's gems are all caught: the crest shows it in its motes
   const allGemsCaught = Boolean(firebaseUser) && earnedToday >= SHIELD_GEMS_PER_DAY;
 
-  // Their count decides the green odds, so it's read once they're signed in
+  // Their count decides the green odds, so it's read once they're signed in.
+  // Keyed on the uid rather than the user object: that object is replaced on
+  // every window focus, which would otherwise re-read on every tab switch.
+  const uid = firebaseUser?.uid;
   useEffect(() => {
-    if (!firebaseUser) {
+    setShieldsKnown(false);
+
+    if (!uid) {
       setEarnedToday(0);
       setCapReached(false);
       return;
     }
+
+    // Signing out while the read is in flight shouldn't apply its answer
+    let current = true;
     getShieldsToday()
       .then((status) => {
+        if (!current) return;
         setEarnedToday(status.earnedToday);
         setCapReached(status.capReached);
+        setShieldsKnown(true);
       })
       .catch((error) => console.error('Error loading caught shields:', error));
-  }, [firebaseUser]);
+
+    return () => {
+      current = false;
+    };
+  }, [uid]);
 
   // Lift the freeze when its time is up
   useEffect(() => {
@@ -441,13 +458,13 @@ export default function HeroShield() {
     if (flight || frozen) return;
 
     /*
-     * With nothing left to win or lose - signed out, the day's five gems
-     * already caught, or the semester's hundred spent - every shield is blue.
-     * Otherwise a quarter are black; of the rest, green gets rarer as the
-     * day's gems are caught.
+     * With nothing left to win or lose - signed out, their standing not back
+     * from the server yet, the day's five gems already caught, or the
+     * semester's hundred spent - every shield is blue. Otherwise a quarter
+     * are black; of the rest, green gets rarer as the day's gems are caught.
      */
     const nothingAtStake =
-      !firebaseUser || capReached || earnedToday >= SHIELD_GEMS_PER_DAY;
+      !firebaseUser || !shieldsKnown || capReached || earnedToday >= SHIELD_GEMS_PER_DAY;
     const greenChance = GREEN_ODDS[earnedToday] ?? GREEN_ODDS[GREEN_ODDS.length - 1];
     const color: ShieldColor = nothingAtStake
       ? 'blue'
