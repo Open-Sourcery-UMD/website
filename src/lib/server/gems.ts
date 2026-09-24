@@ -14,6 +14,7 @@ import { DocumentData } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
 import {
   CLUB_TIME_ZONE,
+  eventGemValue,
   GEM_VALUES,
   getSemesterStart,
   publicRepoPRValue,
@@ -30,7 +31,6 @@ import {
 } from "@/lib/githubApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
-const SPECIAL_EVENT_NAMES = ["hack session", "gbm", "general body meeting"];
 
 const LEADERBOARD_SIZE = 5;
 const LEADERBOARD_TTL_MS = 10 * 60_000;
@@ -44,6 +44,11 @@ export interface GemAction {
   gems: number;
   /** Set on lines that aggregate several of the same thing */
   unit?: "issue" | "PR" | "review" | "shield";
+  /**
+   * When it happened, ISO, on lines that describe one dated action. The
+   * aggregate lines cover a whole semester and have none.
+   */
+  at?: string;
 }
 
 export interface GemBreakdown {
@@ -132,7 +137,9 @@ function isOrgRepository(fullName: string): boolean {
 }
 
 function formatDate(value: string | Date): string {
-  return new Date(value).toLocaleDateString("en-US");
+  // In the club's time zone, like everything else dated here - otherwise a
+  // late-evening merge reads as the next day on a UTC server
+  return new Date(value).toLocaleDateString("en-US", { timeZone: CLUB_TIME_ZONE });
 }
 
 /**
@@ -155,6 +162,21 @@ function fetchOutsidePRs(
     logins.map((login) => ({ login, excludeRepos: ownRepos(index, login) })),
     startDate
   );
+}
+
+/**
+ * Dated lines first, newest at the top, then the summaries that cover the
+ * whole semester, alphabetically.
+ *
+ * Sorting on the dates themselves rather than on the labels that carry them
+ * is what keeps 10/1 above 9/2: as text, "1" comes before "9".
+ */
+function byRecency(a: GemAction, b: GemAction): number {
+  // ISO timestamps compare chronologically as strings
+  if (a.at && b.at) return b.at.localeCompare(a.at);
+  if (a.at) return -1;
+  if (b.at) return 1;
+  return a.label.localeCompare(b.label);
 }
 
 async function computeFromProfile(
@@ -196,12 +218,13 @@ async function computeFromProfile(
       const eventDate = new Date(eventDateStr);
       if (eventDate < startDate) continue;
 
-      const name = String(event.summary || "").toLowerCase();
-      const isSpecial = SPECIAL_EVENT_NAMES.some((special) => name.includes(special));
-
-      const gems = isSpecial ? GEM_VALUES.specialEvent : GEM_VALUES.otherEvent;
+      const gems = eventGemValue(String(event.summary || ""));
       totalGems += gems;
-      actions.push({ label: `Attended '${event.summary}' on ${formatDate(eventDate)}`, gems });
+      actions.push({
+        label: `Attended '${event.summary}' on ${formatDate(eventDate)}`,
+        gems,
+        at: eventDate.toISOString(),
+      });
     }
   }
 
@@ -266,7 +289,11 @@ async function computeFromProfile(
           : publicRepoPRValue(outsideSoFar++);
         totalGems += gems;
         const mergedDate = pr.mergedAt ? formatDate(pr.mergedAt) : "unknown date";
-        actions.push({ label: `Created a PR merged into '${pr.repo}' on ${mergedDate}`, gems });
+        actions.push({
+          label: `Created a PR merged into '${pr.repo}' on ${mergedDate}`,
+          gems,
+          at: pr.mergedAt || undefined,
+        });
       }
     } else {
       console.error(`Outside PRs unavailable for ${login}; scored without them`);
@@ -275,7 +302,7 @@ async function computeFromProfile(
 
   return {
     totalGems,
-    actions: actions.sort((a, b) => b.label.localeCompare(a.label)),
+    actions: actions.sort(byRecency),
   };
 }
 

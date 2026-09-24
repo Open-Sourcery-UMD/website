@@ -62,12 +62,20 @@ function clubMidnight(year: number, month: number, day: number): Date {
  */
 export function getSemesterStart(now: Date = new Date()): Date {
   const { year } = clubDateParts(now);
-  const fallStart = clubMidnight(year, 7, 15); // August 15
-  const springStart = clubMidnight(year, 0, 15); // January 15
 
-  if (now >= fallStart) return fallStart;
-  if (now >= springStart) return springStart;
-  return clubMidnight(year - 1, 7, 15);
+  if (now >= fallSemesterStart(year)) return fallSemesterStart(year);
+  if (now >= springSemesterStart(year)) return springSemesterStart(year);
+  return fallSemesterStart(year - 1);
+}
+
+/** Midnight on the day the fall semester starts, in the club's time zone */
+function fallSemesterStart(year: number): Date {
+  return clubMidnight(year, 7, 15); // August 15
+}
+
+/** Midnight on the day the spring semester starts */
+function springSemesterStart(year: number): Date {
+  return clubMidnight(year, 0, 15); // January 15
 }
 
 /**
@@ -120,11 +128,13 @@ function isGraduateStudent(graduationYear: string | null): boolean {
 }
 
 /**
- * The academic year a date falls in. It rolls over on September 1, so from
- * that date the class of 2030 counts as freshmen.
+ * The academic year a date falls in, named for the spring it ends in. It
+ * rolls over when the fall semester starts, so from that day the class of
+ * 2030 counts as freshmen.
  */
 function getAcademicYear(now: Date = new Date()): number {
-  return now.getMonth() >= 8 ? now.getFullYear() + 1 : now.getFullYear();
+  const { year } = clubDateParts(now);
+  return now >= fallSemesterStart(year) ? year + 1 : year;
 }
 
 /**
@@ -196,6 +206,17 @@ export const GEM_VALUES = {
   /** Each PR merged into another Open Sourcery project (any org repository) */
   prIntoOtherProject: 60,
 } as const;
+
+/** Events whose name marks them as one of the club's own working meetings */
+const SPECIAL_EVENT_NAMES = ['hack session', 'gbm', 'general body meeting'];
+
+/** What attending an event is worth, decided by its name */
+export function eventGemValue(summary: string): number {
+  const name = summary.toLowerCase();
+  return SPECIAL_EVENT_NAMES.some((special) => name.includes(special))
+    ? GEM_VALUES.specialEvent
+    : GEM_VALUES.otherEvent;
+}
 
 /**
  * Merged pull requests into public repositories outside Open Sourcery are
