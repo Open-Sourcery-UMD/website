@@ -33,6 +33,9 @@ function toProject(id: string, data: DocumentData): Project {
   return {
     ...data,
     id,
+    // What the repository says about itself, kept current by the daily sync,
+    // falling back to what the proposal said
+    description: data.repositoryDescription || data.description,
     createdAt: data.createdAt?.toDate?.() || new Date(),
   } as Project;
 }

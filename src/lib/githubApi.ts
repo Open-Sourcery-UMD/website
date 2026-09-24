@@ -106,7 +106,30 @@ export async function inviteUserToOrganization(
 export async function getOrganizationRepositories(
   org: string = GITHUB_ORG
 ): Promise<string[]> {
-  const allRepos: string[] = [];
+  return (await fetchOrganizationRepos(org)).map((repo: any) => repo.name);
+}
+
+/**
+ * What each repository says about itself, keyed by lowercased name. A
+ * repository with no description of its own is left out rather than mapped to
+ * an empty string, so callers can tell "says nothing" from "says ''".
+ */
+export async function getOrganizationRepositoryDescriptions(
+  org: string = GITHUB_ORG
+): Promise<Map<string, string>> {
+  const descriptions = new Map<string, string>();
+
+  for (const repo of await fetchOrganizationRepos(org)) {
+    const description = (repo.description ?? "").trim();
+    if (description) descriptions.set(repo.name.toLowerCase(), description);
+  }
+
+  return descriptions;
+}
+
+/** Every repository in the org, as the API describes them */
+async function fetchOrganizationRepos(org: string): Promise<any[]> {
+  const allRepos: any[] = [];
   let page = 1;
   const perPage = 100;
 
@@ -123,7 +146,7 @@ export async function getOrganizationRepositories(
     const repos = await response.json();
     if (repos.length === 0) break;
 
-    allRepos.push(...repos.map((repo: any) => repo.name));
+    allRepos.push(...repos);
     if (repos.length < perPage) break;
     page++;
   }

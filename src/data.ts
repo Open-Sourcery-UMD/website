@@ -282,7 +282,13 @@ type projectStatus = 'PROPOSED' | 'IN_PROGRESS' | 'ARCHIVED';
 export interface Project {
   id: string;
   projectName: string;
+  /**
+   * What to show. Stored as the description from the proposal; reads resolve
+   * it to the repository's own description once there is one.
+   */
   description: string;
+  /** The repository's description, refreshed daily. Null when it has none. */
+  repositoryDescription?: string | null;
   yearRange: [number, number];
   technologiesUsed: string[];
   technologiesRequired: string[];
