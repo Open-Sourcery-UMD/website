@@ -1,9 +1,12 @@
 name: Send Update Emails
 
 on:
-#  schedule:
-#    # 9:15 AM EST = 14:15 UTC, Monday-Friday
-#    - cron: '15 14 * * 1-5'
+  schedule:
+    # 9:15am, Monday to Friday, New York time. Cron only speaks UTC, so there are two:
+    # one for daylight saving, one for standard time. The job itself skips
+    # whichever one isn't today's.
+    - cron: '15 13 * * 1-5'
+    - cron: '15 14 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -28,4 +31,15 @@ jobs:
           EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
           NEXT_PUBLIC_GITHUB_ORG: ${{ vars.GH_ORG || 'Open-Sourcery-UMD' }}
-        run: npx tsx scripts/send-warning-emails.ts
+        run: |
+          # Only the schedule matching today's New York offset does the work
+          if [ "$(TZ=America/New_York date +%z)" = "-0400" ]; then
+            todays_cron='15 13 * * 1-5'
+          else
+            todays_cron='15 14 * * 1-5'
+          fi
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "$todays_cron" ]; then
+            echo "Not 9:15am in New York today; the other schedule covers it."
+            exit 0
+          fi
+          npx tsx scripts/send-warning-emails.ts

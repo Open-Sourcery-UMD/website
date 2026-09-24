@@ -349,9 +349,15 @@ export interface ShieldGemResult {
   earnedToday: number;
 }
 
-/** The UTC day a shield gem counts towards */
+/**
+ * The day a shield gem counts towards, in the club's own time zone, so the
+ * five reset at midnight in Maryland rather than at 7 or 8pm the evening
+ * before. en-CA formats as YYYY-MM-DD.
+ */
+const CLUB_TIME_ZONE = 'America/New_York';
+
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: CLUB_TIME_ZONE }).format(new Date());
 }
 
 /**
