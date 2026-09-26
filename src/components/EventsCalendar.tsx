@@ -192,7 +192,7 @@ export default function EventsCalendar() {
       </h2>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {events.slice(0, 4).map((event) => (
+        {events.map((event) => (
           <EventCard key={event.id} event={event} isOngoing={isEventOngoing(event)} />
         ))}
       </div>

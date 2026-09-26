@@ -1,9 +1,7 @@
 import { Project, TECHNOLOGIES } from '@data';
 
 /**
- * Brand colours for the technologies a project can list, used to theme its
- * card. Several are too dark to read as text on a dark card, so they're
- * lightened by getReadableColor rather than being compromised here.
+ * Brand colours for the technologies a project can list.
  */
 const TECHNOLOGY_COLORS: Record<string, string> = {
   // Core Languages & Platforms

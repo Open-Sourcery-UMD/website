@@ -1,6 +1,11 @@
 import { CalendarEvent } from "@/types/events";
 
 /**
+ * How many events the site looks ahead to.
+ */
+export const UPCOMING_EVENTS = 4;
+
+/**
  * Determines if an event is currently ongoing
  * Handles both all-day and timed events
  * @param event - The calendar event to check
