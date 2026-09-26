@@ -66,9 +66,15 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
     imageSrc = "/event-images/bitcamp.png";
   } else if (lowerSummary.includes("jeopardy")) {
     imageSrc = "/event-images/jeopardy.png";
+  } else if (lowerSummary.includes("openjs")) {
+    imageSrc = "/event-images/openjs.png";
+  } else if (lowerSummary.includes("first look fair") || lowerSummary.includes("second look fair")) {
+    imageSrc = "/event-images/maryland_m.png";
+  } else if (lowerSummary.includes("technica")) {
+    imageSrc = "/event-images/technica.png";
+  } else if (lowerSummary.includes("awc")) {
+    imageSrc = "/event-images/awc.png";
   }
-
-  const isCrest = imageSrc.startsWith('/open_sourcery');
 
   return (
     <motion.div
@@ -80,9 +86,6 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
       onHoverEnd={() => setIsHovered(false)}
     >
       <div className="relative h-56 overflow-hidden rounded-t-3xl">
-        {isCrest ? (
-          // A quiet plate: house gradient, a faint grid, and the mark held at
-          // a readable size off to one side
           <div className="absolute inset-0 bg-[radial-gradient(120%_100%_at_15%_0%,rgba(160,205,255,0.95),transparent_64%),radial-gradient(90%_80%_at_100%_100%,rgba(198,210,255,0.85),transparent_62%)]">
             <div
               className="absolute inset-0 opacity-[0.5]"
@@ -103,18 +106,6 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
               }`}
             />
           </div>
-        ) : (
-          <Image
-            src={imageSrc}
-            alt={event.summary}
-            width={600}
-            height={400}
-            className={`object-cover w-full h-full transition-transform duration-500 ${
-              isHovered ? "scale-110" : "scale-100"
-            }`}
-          />
-        )}
-
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/60 to-white/95 flex items-end">
           <div className="p-5 w-full">
