@@ -81,6 +81,11 @@ const EventCard = ({ event, isOngoing }: { event: CalendarEvent; isOngoing: bool
       className={`surface rounded-3xl overflow-hidden group cursor-pointer relative ${
         isOngoing ? 'animate-sparkle' : ''
       }`}
+      // The card clamps the description to two lines; the browser's own
+      // tooltip is where the rest of it lives. Undefined rather than an empty
+      // string for an event that has none, so React leaves the attribute off
+      // entirely and nothing pops up on hover.
+      title={event.description?.trim() || undefined}
       whileHover={{ y: -5 }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
