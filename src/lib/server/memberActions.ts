@@ -19,7 +19,7 @@ import {
   RepositoryMembership,
 } from "@/lib/githubApi";
 import { sendEmail } from "@/lib/emailService";
-import { leadCannotDeleteMessage, leadCannotLeaveMessage } from "@/data";
+import { leadCannotDeleteMessage, leadCannotLeaveMessage, SITE_URL } from "@/data";
 import { addToProjectChannel, grantProjectRoles, removeFromProjectChannel } from "./discordSync";
 import { DISCORD_INVITE_URL } from "@/lib/discordApi";
 
@@ -228,15 +228,28 @@ async function notifyLeadOfJoin(
 
     const developerName =
       [profile.firstName, profile.lastName].filter(Boolean).join(" ") || login;
+    const greeting = lead.data()?.firstName ? `Hey ${lead.data()!.firstName},` : "Hey,";
 
+    // The new developer has been told to expect a first task, to come to the
+    // next Hack Session, and to read the Developer Guide. These are the other
+    // half of that, drawn from the onboarding advice in the Lead Dev Guide.
     await sendEmail(
       [leadEmail],
       `[${project.projectName}] New Developer Joined: ${developerName}`,
-      `Hello,\n\n` +
-        `A new developer has joined your project '${project.projectName}'!\n\n` +
-        `Developer: ${developerName}\n` +
-        `Discord Username: ${profile.discordUsername || "N/A"}\n` +
-        `GitHub Username: ${login}\n\n` +
+      `${greeting}\n\n` +
+        `${developerName} has joined '${project.projectName}' as a Developer!\n\n` +
+        `  Discord: ${profile.discordUsername || "not set yet"}\n` +
+        `  GitHub:  ${login}\n\n` +
+        `They've been sent an invitation to the ${project.repositoryName} repository, ` +
+        `and they'll get their Developer role and channel access automatically.\n\n` +
+        `Tips for what to do next:\n\n` +
+        `1. Give them a "good first issue" soon - something small and real, ` +
+        `so they can land a pull request early.\n` +
+        `2. Say hello in your project's Discord channel, and tell them directly ` +
+        `about any task you assign.\n` +
+        `3. Pair them with someone on the team, and let them know when your next ` +
+        `meeting or Hack Session meet-up is.\n\n` +
+        `More on onboarding: ${SITE_URL}/guides/lead-developer\n\n` +
         `Best regards,\nOpen Sourcery`
     );
   } catch (error) {

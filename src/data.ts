@@ -207,6 +207,15 @@ export const GEM_VALUES = {
   prIntoOtherProject: 60,
 } as const;
 
+/** Where the site lives, for links in emails and anywhere off-site */
+export const SITE_URL = 'https://opensourcery.umd.edu';
+
+/**
+ * The club's Discord invite. The server can override its own copy through an
+ * env var; this is the one the browser links to.
+ */
+export const DISCORD_INVITE_URL = 'https://discord.com/invite/BWvbpgskZT';
+
 /** Events whose name marks them as one of the club's own working meetings */
 const SPECIAL_EVENT_NAMES = ['hack session', 'gbm', 'general body meeting'];
 

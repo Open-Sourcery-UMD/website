@@ -1,3 +1,4 @@
+import { DISCORD_INVITE_URL } from '@data';
 import Link from 'next/link';
 import { cloneElement } from 'react';
 import { FaDiscord, FaGithub, FaInstagram, FaLinkedinIn, FaRegEnvelope } from 'react-icons/fa';
@@ -66,7 +67,7 @@ export const Footer = ({ className }: Props) => {
               icon={<FaRegEnvelope />}
             />
             <FooterIcon
-              link="https://discord.com/invite/BWvbpgskZT"
+              link={DISCORD_INVITE_URL}
               ariaLabel="Discord"
               fill={FILLS.discord}
               icon={<FaDiscord />}

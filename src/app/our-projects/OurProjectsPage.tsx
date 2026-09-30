@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PageContainer, SectionContainer } from '@components/Container';
-import { leadCannotLeaveMessage, Project } from '@data';
+import { DISCORD_INVITE_URL, leadCannotLeaveMessage, Project } from '@data';
 import { CardMembership, ProjectCard } from '@components/ProjectCard';
+import JoinedProjectModal from '@components/project/JoinedProjectModal';
 import Link from 'next/link';
 import { useAuth } from '@context/AuthContext';
 import { useUserProjects } from '@hooks/useUserProjects';
@@ -58,7 +59,13 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
   const [joiningProjectId, setJoiningProjectId] = useState<string | null>(null);
   const [leavingProjectId, setLeavingProjectId] = useState<string | null>(null);
   // Shown after a join when they couldn't be added to the project's Discord channel
-  const [discordNotice, setDiscordNotice] = useState<{ projectName: string; inviteUrl: string } | null>(null);
+  // Shown after a successful join: what happens next, and where Discord got to
+  const [joined, setJoined] = useState<{
+    projectName: string;
+    repositoryName: string;
+    addedToChannel: boolean | null;
+    inviteUrl: string;
+  } | null>(null);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -121,14 +128,17 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
 
     setJoiningProjectId(project.id);
     setError('');
-    setDiscordNotice(null);
+    setJoined(null);
 
     try {
       // The server re-checks every rule before sending the invitation
       const discord = await joinProject(project.id);
-      if (discord?.addedToChannel === false) {
-        setDiscordNotice({ projectName: project.projectName, inviteUrl: discord.inviteUrl });
-      }
+      setJoined({
+        projectName: project.projectName,
+        repositoryName: project.repositoryName,
+        addedToChannel: discord?.addedToChannel ?? null,
+        inviteUrl: discord?.inviteUrl || DISCORD_INVITE_URL,
+      });
       // Joining changes both membership and team sizes
       await Promise.all([refreshMembership({ fresh: true }), loadProjects()]);
     } catch (err) {
@@ -197,25 +207,12 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
           </div>
         )}
 
-        {discordNotice && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl">
-            You&apos;re on the &apos;{discordNotice.projectName}&apos; team! We couldn&apos;t find{' '}
-            <span className="font-semibold">@{firestoreUser?.discordUsername || 'your username'}</span> in
-            the Open Sourcery Discord, so you haven&apos;t been added to the project&apos;s channel yet.{' '}
-            <a
-              href={discordNotice.inviteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium underline"
-            >
-              Join the server
-            </a>{' '}
-            or check your username in{' '}
-            <Link href="/settings" className="font-medium underline">
-              Settings
-            </Link>
-            , and you&apos;ll be added within a day.
-          </div>
+        {joined && (
+          <JoinedProjectModal
+            {...joined}
+            discordUsername={firestoreUser?.discordUsername}
+            onClose={() => setJoined(null)}
+          />
         )}
 
         {error && (
