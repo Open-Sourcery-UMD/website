@@ -262,8 +262,7 @@ export function publicRepoPRValue(precedingCount: number): number {
 export function leadCannotLeaveMessage(projectName: string): string {
   return (
     `You're the Lead Developer of "${projectName}", so you can't leave it yet. ` +
-    `Transfer leadership to another member first: on the home page, open Edit Project ` +
-    `in your project's section.`
+    `Transfer leadership to another member first.`
   );
 }
 
@@ -271,8 +270,7 @@ export function leadCannotLeaveMessage(projectName: string): string {
 export function leadCannotDeleteMessage(projectName: string): string {
   return (
     `You're the Lead Developer of "${projectName}", so you can't delete your account yet. ` +
-    `Transfer leadership to another member first: on the home page, open Edit Project ` +
-    `in your project's section.`
+    `Transfer leadership to another member first.`
   );
 }
 
