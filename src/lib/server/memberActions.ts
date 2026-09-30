@@ -20,7 +20,7 @@ import {
 } from "@/lib/githubApi";
 import { sendEmail } from "@/lib/emailService";
 import { leadCannotDeleteMessage, leadCannotLeaveMessage } from "@/data";
-import { addToProjectChannel, removeFromProjectChannel } from "./discordSync";
+import { addToProjectChannel, grantProjectRoles, removeFromProjectChannel } from "./discordSync";
 import { DISCORD_INVITE_URL } from "@/lib/discordApi";
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
@@ -350,6 +350,10 @@ export async function joinProject(uid: string, projectId: unknown): Promise<Join
     bestEffortDiscord("channel add", async () => {
       addedToChannel = await addToProjectChannel(project.id, profile.discordUsername);
     }),
+    // Same moment as the channel, rather than waiting for the daily sync.
+    // They're a developer here, never the lead: the lead can't join their
+    // own project, they start it.
+    bestEffortDiscord("role grant", () => grantProjectRoles(profile.discordUsername, false)),
   ]);
 
   return { addedToChannel, inviteUrl: DISCORD_INVITE_URL };
@@ -378,6 +382,63 @@ export async function leaveProject(uid: string, projectId: unknown): Promise<voi
       removeFromProjectChannel(project.id, profile.discordUsername)
     ),
   ]);
+}
+
+/**
+ * Hands the lead developer role to another member of the project.
+ *
+ * Enforced here rather than in the browser, which is also what makes it
+ * possible to give the new lead their Discord role straight away instead of
+ * leaving it to the next daily sync.
+ *
+ * The outgoing lead keeps theirs for now: whether they still lead something
+ * else is a question only the daily sync can answer, so it does.
+ */
+export async function transferProjectLeadership(
+  uid: string,
+  projectId: unknown,
+  newLeadUid: unknown
+): Promise<void> {
+  if (typeof newLeadUid !== "string" || !newLeadUid) {
+    throw new HttpError(400, "newLeadUid is required");
+  }
+
+  const project = await getProject(projectId);
+  if (project.pointOfContact !== uid) {
+    throw new HttpError(403, "Only the current lead can hand over a project.");
+  }
+  if (newLeadUid === uid) {
+    throw new HttpError(409, "You already lead this project.");
+  }
+
+  const newLead = await getProfile(newLeadUid);
+  const login = (newLead.gitHubUsername || "").trim();
+  if (!login) {
+    throw new HttpError(409, "The new lead needs a GitHub username on their profile first.");
+  }
+
+  // Read fresh: someone may have left since the page was opened
+  const members = await getRepositoryMembership(GITHUB_ORG, project.repositoryName, {
+    fresh: true,
+  });
+  const target = normalizeLogin(login);
+
+  if (members.collaborators.some((member) => normalizeLogin(member) === target)) {
+    await adminDb().collection("projects").doc(project.id).update({
+      pointOfContact: newLeadUid,
+    });
+    await bestEffortDiscord("role grant", () =>
+      grantProjectRoles(newLead.discordUsername, true)
+    );
+    return;
+  }
+
+  // An invitation not yet accepted isn't access: they couldn't merge anything
+  if (members.pendingInvitees.some((member) => normalizeLogin(member) === target)) {
+    throw new HttpError(409, "The new lead has to accept their repository invitation first.");
+  }
+
+  throw new HttpError(409, "The new lead has to be a member of the project.");
 }
 
 /**

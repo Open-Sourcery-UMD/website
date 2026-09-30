@@ -4,6 +4,7 @@ import { errorResponse, HttpError } from "@/lib/server/httpErrors";
 import {
   joinProject,
   leaveProject,
+  transferProjectLeadership,
   withdrawProposal,
 } from "@/lib/server/memberActions";
 
@@ -28,6 +29,10 @@ export async function POST(request: NextRequest) {
 
       case "withdrawProposal":
         await withdrawProposal(uid, projectId);
+        break;
+
+      case "transferLeadership":
+        await transferProjectLeadership(uid, projectId, body?.newLeadUid);
         break;
 
       default:

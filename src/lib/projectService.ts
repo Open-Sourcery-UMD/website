@@ -359,29 +359,18 @@ export async function updateProjectDetails(
 }
 
 /**
- * Hands the lead developer role to another member of the project
+ * Hands the lead developer role to another member of the project.
+ *
+ * The server decides: it re-reads the roster, refuses anyone who isn't an
+ * accepted member, and gives the new lead their Discord role.
  */
 export async function transferProjectLeadership(
   project: Project,
   newLeadUid: string
 ): Promise<void> {
-  try {
-    // Re-read the roster: someone may have left since the modal opened.
-    // Only an active member with an account can take over as lead
-    const members = await getProjectTeamMembers(project);
-    const newLead = members.find((member) => member.uid === newLeadUid);
-
-    if (!newLead || newLead.gitHubOnly) {
-      throw new Error('The new lead must be a member of the project');
-    }
-    if (newLead.pending) {
-      throw new Error('The new lead has to accept their repository invitation first');
-    }
-
-    const docRef = doc(collection(db, PROJECTS_COLLECTION), project.id);
-    await updateDoc(docRef, { pointOfContact: newLeadUid });
-  } catch (error) {
-    console.error('Error transferring project leadership:', error);
-    throw error;
-  }
+  await postAuthorized('/api/projects', {
+    action: 'transferLeadership',
+    projectId: project.id,
+    newLeadUid,
+  });
 }

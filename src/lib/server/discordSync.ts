@@ -10,15 +10,22 @@
  * only ever added automatically; it's taken away solely when someone leaves
  * the project on the site (or deletes their account), never by the daily sync.
  *
+ * Roles work the same way round: granted here the moment someone joins a
+ * project or launches one, and only ever taken away by the daily sync, which
+ * can see every project at once and so knows when someone's last one is
+ * behind them.
+ *
  * Imports are relative on purpose: the daily sync script runs this via tsx.
  */
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
 import { sendEmail } from "../emailService";
 import {
+  addRole,
   channelNameFor,
   createPrivateProjectChannel,
   DISCORD_INVITE_URL,
+  DiscordMember,
   DiscordSetup,
   findMemberByUsername,
   getChannel,
@@ -120,7 +127,9 @@ export async function syncProjectChannel(
   return { created, granted };
 }
 
-async function readProject(projectId: string): Promise<ChannelProject & { pointOfContact?: string } | null> {
+async function readProject(
+  projectId: string
+): Promise<(ChannelProject & { pointOfContact?: string; description: string }) | null> {
   const snapshot = await adminDb().collection("projects").doc(projectId).get();
   if (!snapshot.exists) return null;
   const data = snapshot.data()!;
@@ -128,10 +137,35 @@ async function readProject(projectId: string): Promise<ChannelProject & { pointO
     id: snapshot.id,
     projectName: data.projectName || "",
     repositoryName: data.repositoryName || "",
+    // The repository's own description where there is one, as the site shows it
+    description: data.repositoryDescription || data.description || "",
     discordChannelId: data.discordChannelId,
     discordMemberIds: data.discordMemberIds,
     pointOfContact: data.pointOfContact,
   };
+}
+
+/**
+ * How much of a description the alert quotes. Every project's fits well
+ * inside this; it's only here so an unusually long one can't push the message
+ * past Discord's 2,000-character limit and lose the announcement altogether.
+ */
+const ALERT_DESCRIPTION_LIMIT = 500;
+
+/**
+ * The description as one tidy line in quotes, ready to append, or nothing at
+ * all for a project that doesn't have one
+ */
+function quotedDescription(description: string): string {
+  const text = description.replace(/\s+/g, " ").trim();
+  if (!text) return "";
+
+  const shortened =
+    text.length > ALERT_DESCRIPTION_LIMIT
+      ? `${text.slice(0, ALERT_DESCRIPTION_LIMIT - 1).trimEnd()}…`
+      : text;
+
+  return ` "${shortened}"`;
 }
 
 async function discordIdOfUser(uid: string | undefined): Promise<string | null> {
@@ -207,6 +241,7 @@ export async function launchProjectOnDiscord(projectId: string): Promise<void> {
   const lead = await findMemberByUsername(leadUsername);
 
   await ensureProjectChannel(project, setup, lead?.user.id ?? null);
+  if (lead) await grantRolesTo(lead, true);
 
   if (!setup.projectUpdatesChannelId) {
     console.warn("No #project-updates channel found; skipping the new project announcement");
@@ -221,9 +256,47 @@ export async function launchProjectOnDiscord(projectId: string): Promise<void> {
 
   await sendMessage(
     setup.projectUpdatesChannelId,
-    `🚨 NEW PROJECT ALERT 🚨\n${who} has started the '${project.projectName}' project!`,
+    `🚨 NEW PROJECT ALERT 🚨\n${who} has started the '${project.projectName}' project!` +
+      quotedDescription(project.description),
     lead ? [lead.user.id] : []
   );
+}
+
+/**
+ * Gives someone the roles that come with being on a project. A lead gets both:
+ * they develop on their own project too, which is how the daily sync counts
+ * them as well.
+ *
+ * Roles already held are left alone, so this costs nothing to call again.
+ */
+async function grantRolesTo(member: DiscordMember, isLead: boolean): Promise<void> {
+  const setup = await getDiscordSetup();
+  const held = new Set(member.roles);
+
+  const wanted = isLead
+    ? [setup.leadRoleId, setup.developerRoleId]
+    : [setup.developerRoleId];
+
+  await Promise.all(
+    wanted.filter((roleId) => !held.has(roleId)).map((roleId) => addRole(member.user.id, roleId))
+  );
+}
+
+/**
+ * The project roles for whoever owns a Discord username, looked up among the
+ * server's members. Someone who isn't in the server can't be given a role;
+ * the daily sync picks them up once they arrive.
+ */
+export async function grantProjectRoles(
+  discordUsername: string | undefined,
+  isLead: boolean
+): Promise<void> {
+  if (!isDiscordConfigured()) return;
+
+  const member = await findMemberByUsername(discordUsername || "");
+  if (!member) return;
+
+  await grantRolesTo(member, isLead);
 }
 
 export interface DiscordInviteStatus {
