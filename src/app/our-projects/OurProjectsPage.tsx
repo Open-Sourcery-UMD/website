@@ -5,15 +5,18 @@ import { PageContainer, SectionContainer } from '@components/Container';
 import { DISCORD_INVITE_URL, leadCannotLeaveMessage, Project } from '@data';
 import { CardMembership, ProjectCard } from '@components/ProjectCard';
 import JoinedProjectModal from '@components/project/JoinedProjectModal';
+import ProjectSettingsModal from '@components/project/ProjectSettingsModal';
 import Link from 'next/link';
 import { useAuth } from '@context/AuthContext';
 import { useUserProjects } from '@hooks/useUserProjects';
 import {
   getFirestoreProjects,
   getProjectLeads,
+  getProjectTeamMembers,
   joinProject,
   leaveProject,
   ProjectLead,
+  ProjectTeamMember,
 } from '@/lib/projectService';
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || 'Open-Sourcery-UMD';
@@ -59,6 +62,13 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
   const [joiningProjectId, setJoiningProjectId] = useState<string | null>(null);
   const [leavingProjectId, setLeavingProjectId] = useState<string | null>(null);
   // Shown after a join when they couldn't be added to the project's Discord channel
+  // The lead's own project, opened from the gear on its card. Its roster is
+  // fetched on demand rather than for every card on the page.
+  const [settingsFor, setSettingsFor] = useState<Project | null>(null);
+  // The roster of the project this viewer leads, fetched once the list
+  // arrives rather than when they click, so the modal opens at once
+  const [myTeam, setMyTeam] = useState<ProjectTeamMember[]>([]);
+
   // Shown after a successful join: what happens next, and where Discord got to
   const [joined, setJoined] = useState<{
     projectName: string;
@@ -92,6 +102,30 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
   }, [loadProjects]);
 
   const myProjectIds = new Set(myProjects.map((project) => project.id));
+
+  // Their own project's roster, read as soon as the list lands. The settings
+  // modal takes its team-spot bounds from it, and waiting for it on the click
+  // put a visible pause between the gear and the modal.
+  const ledProjectId = projects.find(
+    (project) => project.pointOfContact === firebaseUser?.uid
+  )?.id;
+  useEffect(() => {
+    const led = projects.find((project) => project.id === ledProjectId);
+    if (!led) {
+      setMyTeam([]);
+      return;
+    }
+
+    let current = true;
+    getProjectTeamMembers(led).then((team) => {
+      if (current) setMyTeam(team);
+    });
+    return () => {
+      current = false;
+    };
+    // The roster belongs to the project, not to the list it came in
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ledProjectId]);
 
   // Only invited so far, not yet a collaborator anywhere: that invitation has
   // to be answered before they can join a different team
@@ -151,6 +185,8 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
     }
   };
 
+
+
   const handleLeave = async (project: Project) => {
     if (!firebaseUser?.uid) return;
 
@@ -205,6 +241,19 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
             </Link>{' '}
             to join a project.
           </div>
+        )}
+
+        {settingsFor && firebaseUser && (
+          <ProjectSettingsModal
+            project={settingsFor}
+            members={myTeam}
+            currentUid={firebaseUser.uid}
+            onClose={() => setSettingsFor(null)}
+            onSaved={() => {
+              setSettingsFor(null);
+              loadProjects();
+            }}
+          />
         )}
 
         {joined && (
@@ -277,6 +326,11 @@ export default function OurProjectsPage({ semester }: { semester: string }) {
                 joinLocked={busy}
                 joining={joiningProjectId === project.id}
                 leaving={leavingProjectId === project.id}
+                onOpenSettings={
+                  project.pointOfContact === firebaseUser?.uid
+                    ? () => setSettingsFor(project)
+                    : undefined
+                }
               />
             ))}
           </div>

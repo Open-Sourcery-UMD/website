@@ -288,6 +288,12 @@ interface TopicGroup {
 
 type projectStatus = 'PROPOSED' | 'IN_PROGRESS' | 'ARCHIVED';
 
+/**
+ * The largest team any project can ask for, on the proposal form and in a
+ * lead's settings alike.
+ */
+export const MAX_TEAM_SIZE = 12;
+
 export interface Project {
   id: string;
   projectName: string;

@@ -19,7 +19,13 @@ import {
   RepositoryMembership,
 } from "@/lib/githubApi";
 import { sendEmail } from "@/lib/emailService";
-import { leadCannotDeleteMessage, leadCannotLeaveMessage, SITE_URL } from "@/data";
+import {
+  leadCannotDeleteMessage,
+  leadCannotLeaveMessage,
+  MAX_TEAM_SIZE,
+  SITE_URL,
+  YEAR_LABELS,
+} from "@/data";
 import { addToProjectChannel, grantProjectRoles, removeFromProjectChannel } from "./discordSync";
 import { DISCORD_INVITE_URL } from "@/lib/discordApi";
 
@@ -37,6 +43,7 @@ interface ProjectRecord {
   status?: string;
   pointOfContact?: string;
   maxTeamSize: number;
+  currentTeamSize: number;
 }
 
 function toProjectRecord(id: string, data: DocumentData): ProjectRecord {
@@ -47,6 +54,7 @@ function toProjectRecord(id: string, data: DocumentData): ProjectRecord {
     status: data.status,
     pointOfContact: data.pointOfContact,
     maxTeamSize: Number(data.maxTeamSize) || 0,
+    currentTeamSize: Number(data.currentTeamSize) || 0,
   };
 }
 
@@ -395,6 +403,92 @@ export async function leaveProject(uid: string, projectId: unknown): Promise<voi
       removeFromProjectChannel(project.id, profile.discordUsername)
     ),
   ]);
+}
+
+/** The lead-editable fields, as they arrive from the browser */
+interface ProjectDetails {
+  technologiesRequired: string[];
+  technologiesUsed: string[];
+  yearRange: [number, number];
+  maxTeamSize: number;
+}
+
+function readDetails(input: unknown): ProjectDetails {
+  const details = (input ?? {}) as Record<string, unknown>;
+
+  const strings = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+
+  const technologiesUsed = strings(details.technologiesUsed);
+  if (technologiesUsed.length === 0) {
+    throw new HttpError(400, "Select at least one technology.");
+  }
+
+  const range = Array.isArray(details.yearRange) ? details.yearRange : [];
+  const [yearMin, yearMax] = [Number(range[0]), Number(range[1])];
+  const inRange = (year: number) =>
+    Number.isInteger(year) && year >= 0 && year < YEAR_LABELS.length;
+  if (!inRange(yearMin) || !inRange(yearMax) || yearMin > yearMax) {
+    throw new HttpError(400, "That year range isn't valid.");
+  }
+
+  const maxTeamSize = Number(details.maxTeamSize);
+  if (!Number.isInteger(maxTeamSize) || maxTeamSize < 1) {
+    throw new HttpError(400, "Team size must be a whole number.");
+  }
+
+  return {
+    technologiesRequired: strings(details.technologiesRequired),
+    technologiesUsed,
+    yearRange: [yearMin, yearMax],
+    maxTeamSize,
+  };
+}
+
+/**
+ * Updates the details a lead is allowed to change on their own project.
+ *
+ * Team size can be moved between the number of people already on the team
+ * and the largest team the proposal form allows: shrinking below the team
+ * would leave it over capacity, and nothing should exceed the cap everyone
+ * proposes within.
+ */
+export async function updateProjectDetails(
+  uid: string,
+  projectId: unknown,
+  input: unknown
+): Promise<void> {
+  const project = await getProject(projectId);
+  if (project.pointOfContact !== uid) {
+    throw new HttpError(403, "Only the lead of this project can change its settings.");
+  }
+
+  const details = readDetails(input);
+
+  // The live roster, since the page's copy may be minutes old. A GitHub
+  // failure falls back to the stored count rather than blocking the edit.
+  let floor = project.currentTeamSize;
+  try {
+    const members = await getRepositoryMembership(GITHUB_ORG, project.repositoryName, {
+      fresh: true,
+    });
+    floor = members.collaborators.length + members.pendingInvitees.length;
+  } catch (error) {
+    console.error(`Couldn't read the roster of ${project.repositoryName}:`, error);
+  }
+
+  if (details.maxTeamSize > MAX_TEAM_SIZE) {
+    throw new HttpError(409, `A project can have at most ${MAX_TEAM_SIZE} spots.`);
+  }
+  if (details.maxTeamSize < floor) {
+    throw new HttpError(
+      409,
+      `${floor} ${floor === 1 ? "person is" : "people are"} already on the team, so you can't ` +
+        `go below that.`
+    );
+  }
+
+  await adminDb().collection("projects").doc(project.id).update({ ...details });
 }
 
 /**

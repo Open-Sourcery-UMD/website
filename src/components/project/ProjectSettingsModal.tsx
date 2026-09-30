@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { useBodyScrollLock } from '@hooks/useBodyScrollLock';
-import { Project, TECHNOLOGIES, YEAR_LABELS } from '@data';
+import { MAX_TEAM_SIZE, Project, TECHNOLOGIES, YEAR_LABELS } from '@data';
 import {
   ProjectTeamMember,
   transferProjectLeadership,
@@ -58,6 +59,24 @@ const ProjectSettingsModal = ({
   const [yearMax, setYearMax] = useState(
     project.yearRange?.[1] ?? YEAR_LABELS.length - 1
   );
+
+  // Spots can come down to the size of the team and up to what the proposal
+  // asked for. The server checks the same bounds against a fresh roster.
+  //
+  // The roster is the live one; currentTeamSize is whatever was last written
+  // to Firestore and can lag behind it, so it's only the fallback for a
+  // roster that failed to load.
+  const teamFloor = Math.max(members.length || project.currentTeamSize, 1);
+  const teamCeiling = Math.max(MAX_TEAM_SIZE, teamFloor);
+  // Stepped rather than typed, so it can never be read mid-edit or land
+  // outside the bounds. The server checks them again anyway.
+  const [maxTeamSize, setMaxTeamSize] = useState(
+    Math.min(Math.max(project.maxTeamSize, teamFloor), teamCeiling)
+  );
+  const step = (by: number) =>
+    setMaxTeamSize((current) =>
+      Math.min(Math.max(current + by, teamFloor), teamCeiling)
+    );
   const [newLeadUid, setNewLeadUid] = useState('');
 
   // The page behind stays put while this is open
@@ -101,6 +120,7 @@ const ProjectSettingsModal = ({
         technologiesRequired,
         technologiesUsed,
         yearRange: [yearMin, yearMax],
+        maxTeamSize,
       });
       onSaved();
       onClose();
@@ -218,7 +238,7 @@ const ProjectSettingsModal = ({
             <select
               value={yearMin}
               onChange={(event) => handleMinYearChange(Number(event.target.value))}
-              className="bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg px-3 py-2 text-sm"
+              className="select-field bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg pl-3 pr-9 py-2 text-sm"
             >
               {YEAR_LABELS.map((label, index) => (
                 <option key={label} value={index}>
@@ -230,7 +250,7 @@ const ProjectSettingsModal = ({
             <select
               value={yearMax}
               onChange={(event) => setYearMax(Number(event.target.value))}
-              className="bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg px-3 py-2 text-sm"
+              className="select-field bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg pl-3 pr-9 py-2 text-sm"
             >
               {YEAR_LABELS.slice(yearMin).map((label, index) => (
                 <option key={label} value={index + yearMin}>
@@ -238,6 +258,53 @@ const ProjectSettingsModal = ({
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* Team size */}
+        <div className="mb-6">
+          <h4 className="text-graphite font-medium mb-1">Team Size</h4>
+          <p className="text-xs text-graphite-mute mb-3">
+            {teamFloor === teamCeiling
+              ? `${teamFloor} on the team now, which is the most a project can have.`
+              : `${teamFloor} on the team now; up to ${teamCeiling} allowed.`}
+          </p>
+          <div
+            className={`inline-flex items-center gap-2 rounded-lg border border-black/10 bg-graphite/[0.06] py-1.5 pl-3 pr-1.5 ${
+              teamFloor === teamCeiling ? 'opacity-50' : ''
+            }`}
+          >
+            <span
+              className="min-w-[1.25rem] text-center text-sm font-semibold text-graphite"
+              aria-live="polite"
+            >
+              {maxTeamSize}
+            </span>
+            <span className="text-sm text-graphite-soft">
+              {maxTeamSize === 1 ? 'Developer' : 'Developers'}
+            </span>
+            {/* Up and down rather than a text field: there's nothing to type
+                that stepping can't reach, and no way to leave it invalid */}
+            <span className="ml-1 flex flex-col">
+              <button
+                type="button"
+                aria-label="One more spot"
+                onClick={() => step(1)}
+                disabled={maxTeamSize >= teamCeiling}
+                className="rounded px-1 text-graphite-soft transition hover:text-graphite disabled:opacity-30"
+              >
+                <FaChevronUp size={9} />
+              </button>
+              <button
+                type="button"
+                aria-label="One fewer spot"
+                onClick={() => step(-1)}
+                disabled={maxTeamSize <= teamFloor}
+                className="rounded px-1 text-graphite-soft transition hover:text-graphite disabled:opacity-30"
+              >
+                <FaChevronDown size={9} />
+              </button>
+            </span>
           </div>
         </div>
 
@@ -257,7 +324,7 @@ const ProjectSettingsModal = ({
               <select
                 value={newLeadUid}
                 onChange={(event) => setNewLeadUid(event.target.value)}
-                className="bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg px-3 py-2 text-sm"
+                className="select-field bg-graphite/[0.06] border border-black/10 text-graphite rounded-lg pl-3 pr-9 py-2 text-sm"
               >
                 <option value="">Select a developer...</option>
                 {otherMembers.map((member) => (
@@ -288,7 +355,7 @@ const ProjectSettingsModal = ({
           <button
             onClick={handleSave}
             disabled={saving || technologiesUsed.length === 0}
-            className="px-4 py-2 rounded-lg text-sm font-semibold y2k-button text-graphite hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            className="px-4 py-2 rounded-lg text-sm font-semibold y2k-button text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>

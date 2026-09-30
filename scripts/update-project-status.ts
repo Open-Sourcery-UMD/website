@@ -191,18 +191,63 @@ async function syncRepositoryDescriptions(): Promise<number> {
   return changed.length;
 }
 
+/**
+ * Stores each project's team size, counted from GitHub.
+ *
+ * The site writes this only when someone joins or leaves through it, so a
+ * collaborator added or removed on GitHub directly leaves it behind. The
+ * project list recomputes it as it renders, but anything reading the
+ * document straight - the dashboard, a lead's settings - sees what's stored.
+ *
+ * Pending invitations count, the same way they do everywhere else: they're
+ * holding a spot.
+ */
+async function refreshTeamSizes(): Promise<number> {
+  const projects = await db.collection("projects").get();
+
+  const updates = await Promise.all(
+    projects.docs.map(async (projectDoc) => {
+      const project = projectDoc.data();
+      const repoName = (project.repositoryName || "").trim();
+      if (!repoName || project.status === "ARCHIVED") return null;
+
+      let size: number;
+      try {
+        const members = await getRepositoryMembership(GITHUB_ORG, repoName, { fresh: true });
+        size = members.collaborators.length + members.pendingInvitees.length;
+      } catch {
+        // A proposal has no repository yet, so there's nothing to count
+        return null;
+      }
+
+      if (size === Number(project.currentTeamSize)) return null;
+      console.log(
+        `${repoName}: team size ${project.currentTeamSize ?? "unset"} -> ${size}`
+      );
+      return { ref: projectDoc.ref, size };
+    })
+  );
+
+  const changed = updates.filter((update) => update !== null);
+  await Promise.all(changed.map(({ ref, size }) => ref.update({ currentTeamSize: size })));
+
+  return changed.length;
+}
+
 async function main() {
   // The jobs touch different fields, so they run side by side
-  const [archiveNotifications, updated, described] = await Promise.all([
+  const [archiveNotifications, updated, described, resized] = await Promise.all([
     notifyArchivedProjects(),
     activateProposedProjects(),
     syncRepositoryDescriptions(),
+    refreshTeamSizes(),
   ]);
 
   console.log(
     `${archiveNotifications} developer(s) notified about archived projects.`
   );
   console.log(`${described} project description(s) updated from GitHub.`);
+  console.log(`${resized} project team size(s) corrected.`);
   console.log(
     `Project status update script complete. ${updated} project(s) updated to IN_PROGRESS.`
   );

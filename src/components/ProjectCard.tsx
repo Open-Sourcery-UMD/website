@@ -3,6 +3,7 @@ import { useTeamMatching } from '@context/TeamMatchingContext';
 import { ProjectLead } from '@/lib/projectService';
 import { getProjectTheme } from '@/lib/technologyTheme';
 import { FaDiscord, FaEnvelope, FaGithub } from 'react-icons/fa';
+import { HiOutlineCog } from 'react-icons/hi';
 
 const GITHUB_ORG = process.env.NEXT_PUBLIC_GITHUB_ORG || "Open-Sourcery-UMD";
 
@@ -29,6 +30,25 @@ export type CardMembership =
   | 'signed-out'
   | 'unverified';
 
+/**
+ * The label above a corner icon on hover.
+ *
+ * Dark pill, light label - it had ended up near-black on black, which read
+ * as an empty bar above the icon.
+ */
+const CornerTooltip = ({ label }: { label: string }) => (
+  <div
+    className="absolute -top-9 right-1/2 translate-x-1/2
+               bg-graphite/95 text-white text-[11px] px-2.5 py-1
+               rounded-full shadow-card opacity-0 scale-95
+               transition-all duration-200
+               group-hover:opacity-100 group-hover:scale-100
+               pointer-events-none whitespace-nowrap"
+  >
+    {label}
+  </div>
+);
+
 interface ProjectCardProps {
   project: Project;
   /** The project's lead developer, once looked up */
@@ -37,6 +57,8 @@ interface ProjectCardProps {
   /** Offered in place of Join on the viewer's own project */
   onLeave?: (project: Project) => void;
   membership?: CardMembership;
+  /** Passed only for a project the viewer leads; shows the settings icon */
+  onOpenSettings?: () => void;
   /** Disables the button without changing its label, e.g. while another join runs */
   joinLocked?: boolean;
   joining?: boolean;
@@ -49,6 +71,7 @@ export const ProjectCard = ({
   onJoin,
   onLeave,
   membership = 'none',
+  onOpenSettings,
   joinLocked = false,
   joining,
   leaving = false,
@@ -121,46 +144,62 @@ export const ProjectCard = ({
   return (
     <div
       className={`relative ${spotsRemaining <= 0 && !isMember ? 'opacity-60' : ''} surface ${
-        isMember ? 'ring-2 ring-azure/60' : ''
+        isMember ? 'ring-[3px] ring-azure shadow-[0_18px_45px_-18px_rgba(0,113,188,0.65)]' : ''
       } card-glow rounded-3xl p-6 flex flex-col`}
       style={{
         // Hover glow in the theme colour; 73 and 59 are ~45% and ~35% alpha
         ['--glow' as string]: `${theme.accent}73`,
         ['--glow-edge' as string]: `${theme.accent}59`,
-        // The pink border marks the viewer's own project, so the theme gives
-        // way to it there; 59 and 14 are ~35% and ~8% alpha
+        // The viewer's own project is marked in azure instead, so the theme
+        // gives way to it there; 59 and 14 are ~35% and ~8% alpha
         ...(isMember
           ? {}
           : { borderColor: `${theme.accent}59`, borderTopColor: theme.accent, borderTopWidth: 3 }),
-        backgroundImage: `linear-gradient(180deg, ${theme.accent}14, transparent 45%)`,
+        backgroundImage: isMember
+          ? 'linear-gradient(180deg, rgba(0,113,188,0.14), transparent 55%)'
+          : `linear-gradient(180deg, ${theme.accent}14, transparent 45%)`,
       }}
     >
-      <a
-        href={`https://github.com/${GITHUB_ORG}/${project.repositoryName}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="absolute top-4 right-4 group"
-      >
-        <div className="relative">
-          {/* Icon */}
-          <FaGithub
-            size={22}
-            className="text-graphite-soft transition-transform duration-200 group-hover:scale-125 group-hover:text-graphite"
-          />
+      {/* Said outright, rather than left to the ring alone */}
+      {isMember && (
+        <span className="absolute -top-3 left-6 rounded-full bg-azure px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-card">
+          Your project
+        </span>
+      )}
+      <div className="absolute top-4 right-4 flex items-center gap-3">
+        {/* Only the lead sees this, and only on their own project */}
+        {onOpenSettings && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            aria-label="Project settings"
+            className="group"
+          >
+            <div className="relative">
+              <HiOutlineCog
+                size={22}
+                className="text-graphite-soft transition-transform duration-200 group-hover:scale-125 group-hover:text-graphite"
+              />
+              <CornerTooltip label="Project settings" />
+            </div>
+          </button>
+        )}
 
-          {/* Tooltip */}
-          {/* Dark pill, light label - it had ended up near-black on black,
-              which read as an empty bar above the icon */}
-          <div className="absolute -top-9 right-1/2 translate-x-1/2
-                          bg-graphite/95 text-white text-[11px] px-2.5 py-1
-                          rounded-full shadow-card opacity-0 scale-95
-                          transition-all duration-200
-                          group-hover:opacity-100 group-hover:scale-100
-                          pointer-events-none whitespace-nowrap">
-            View on GitHub
+        <a
+          href={`https://github.com/${GITHUB_ORG}/${project.repositoryName}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group"
+        >
+          <div className="relative">
+            <FaGithub
+              size={22}
+              className="text-graphite-soft transition-transform duration-200 group-hover:scale-125 group-hover:text-graphite"
+            />
+            <CornerTooltip label="View on GitHub" />
           </div>
-        </div>
-      </a>
+        </a>
+      </div>
       <h2 className="text-2xl font-semibold text-graphite mb-2">
         {project.projectName}
       </h2>

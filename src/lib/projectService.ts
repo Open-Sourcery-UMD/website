@@ -9,7 +9,6 @@ import {
   getDocs,
   query,
   setDoc,
-  updateDoc,
   where,
   Timestamp,
 } from 'firebase/firestore';
@@ -331,7 +330,10 @@ export async function getProjectTeamMembers(
 }
 
 /**
- * Updates the lead-editable details of a project
+ * Updates the lead-editable details of a project.
+ *
+ * The server owns the rules: only the lead may call it, and team size are
+ * held between the size of the team now and the size the proposal asked for.
  */
 export async function updateProjectDetails(
   projectId: string,
@@ -339,23 +341,10 @@ export async function updateProjectDetails(
     technologiesRequired: string[];
     technologiesUsed: string[];
     yearRange: [number, number];
+    maxTeamSize: number;
   }
 ): Promise<void> {
-  try {
-    const [minYear, maxYear] = details.yearRange;
-    if (minYear > maxYear) {
-      throw new Error('Minimum year cannot be greater than maximum year');
-    }
-    if (details.technologiesUsed.length === 0) {
-      throw new Error('Select at least one technology');
-    }
-
-    const docRef = doc(collection(db, PROJECTS_COLLECTION), projectId);
-    await updateDoc(docRef, details);
-  } catch (error) {
-    console.error('Error updating project details:', error);
-    throw error;
-  }
+  await postAuthorized('/api/projects', { action: 'updateDetails', projectId, details });
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   joinProject,
   leaveProject,
   transferProjectLeadership,
+  updateProjectDetails,
   withdrawProposal,
 } from "@/lib/server/memberActions";
 
@@ -33,6 +34,10 @@ export async function POST(request: NextRequest) {
 
       case "transferLeadership":
         await transferProjectLeadership(uid, projectId, body?.newLeadUid);
+        break;
+
+      case "updateDetails":
+        await updateProjectDetails(uid, projectId, body?.details);
         break;
 
       default:

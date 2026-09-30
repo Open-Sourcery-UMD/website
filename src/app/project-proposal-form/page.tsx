@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { formatYearRange, TECHNOLOGIES, TOPICS, YEAR_LABELS } from '@data';
+import { MAX_TEAM_SIZE, TECHNOLOGIES, TOPICS, YEAR_LABELS, formatYearRange } from '@data';
 import { useAuth } from '@context/AuthContext';
 import { useRouter } from 'next/navigation';
 import FormHeader from '@components/forms/FormHeader';
@@ -301,7 +301,7 @@ const ProjectProposalPage = () => {
             <SliderQuestion
               question="Maximum Team Size"
               minimum={1}
-              maximum={12}
+              maximum={MAX_TEAM_SIZE}
               value={maxTeamSize}
               onChange={setMaxTeamSize}
             />
