@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+state.json
+bot.log
+.env
+*.plist
