@@ -172,7 +172,6 @@ export default function SignUpPage() {
         technologiesExperiencedWith: formData.technologiesExperiencedWith,
         preferredTopics: formData.preferredTopics,
         eventsAttended: [],
-        lastWarningTime: new Date(),
       };
 
       const userCredential = await createUserWithEmailAndPassword(

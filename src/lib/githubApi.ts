@@ -782,33 +782,6 @@ export async function getReviewCountsForRepo(
   return counts;
 }
 
-/**
- * Gets the number of commits by a user in a repo since a given date
- */
-export async function getUserCommitsSince(
-  org: string,
-  repo: string,
-  username: string,
-  since: Date
-): Promise<number> {
-  try {
-    const response = await fetch(
-      `${GITHUB_API}/repos/${org}/${repo}/commits?author=${username}&since=${since.toISOString()}&per_page=1`,
-      { headers: authHeaders() }
-    );
-
-    if (!response.ok) return 0;
-
-    const commits = await response.json();
-    return Array.isArray(commits) ? commits.length : 0;
-  } catch (error) {
-    console.error(
-      `Error fetching commits for ${username} in ${org}/${repo}:`,
-      error
-    );
-    return 0;
-  }
-}
 
 export interface RepositorySummary {
   name: string;

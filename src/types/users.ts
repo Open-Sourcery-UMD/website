@@ -10,7 +10,6 @@ export interface User {
   technologiesExperiencedWith: string[];
   preferredTopics: string[];
   eventsAttended: CalendarEvent[];
-  lastWarningTime: Date;
   emailVerified?: boolean;
   lastVerificationEmailSent?: Date;
 }
