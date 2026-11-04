@@ -218,9 +218,9 @@ export default function LeadDeveloperGuidePage() {
         <GuideTopic title="Your Project's Discord Channel">
           <p>
             Once your repository is created, your project automatically gets its own private
-            Discord channel under the &quot;Projects&quot; category, named to match your project,
-            with you already in it. Developers are added to it when they join your project and
-            removed if they leave, so there&apos;s nothing to set up or maintain.
+            Discord channel under the &quot;⚙️ Development&quot; category, named to match your
+            project, with you already in it. Developers are added to it when they join your
+            project and removed if they leave, so there&apos;s nothing to set up or maintain.
           </p>
         </GuideTopic>
         <GuideTopic title="Points of Contact">

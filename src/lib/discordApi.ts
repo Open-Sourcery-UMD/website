@@ -23,8 +23,18 @@ const DEVELOPER_ROLE_NAME = "Developers";
 // Given access to every project channel the bot creates, so project
 // management can see each team's channel
 const DIRECTORS_ROLE_NAME = "Directors of Project Management";
-const PROJECTS_CATEGORY_NAME = "projects";
+const DEVELOPMENT_CATEGORY_NAME = "⚙️ Development";
 const PROJECT_UPDATES_CHANNEL_NAME = "project-updates";
+
+/**
+ * Channel and category names here carry decorative emoji that get added and
+ * swapped without anyone thinking of this code, so they're matched on their
+ * letters and digits alone: "⚙️ Development" and "Development" both match.
+ */
+function sameChannelName(a: string, b: string): boolean {
+  const core = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return core(a) === core(b);
+}
 
 // Permission bits (https://discord.com/developers/docs/topics/permissions)
 const VIEW_CHANNEL = BigInt(1) << BigInt(10);
@@ -143,14 +153,15 @@ export interface DiscordSetup {
   developerRoleId: string;
   /** Null if the server has no such role; channels are still created */
   directorsRoleId: string | null;
-  projectsCategoryId: string;
+  /** The category new project channels are created under */
+  developmentCategoryId: string;
   projectUpdatesChannelId: string | null;
   botUserId: string;
   channels: DiscordChannel[];
 }
 
 /**
- * Finds the roles, the projects category and #project-updates by name. Fails
+ * Finds the roles, the development category and #project-updates by name. Fails
  * loudly if a required one is missing, since everything else depends on them.
  */
 export async function getDiscordSetup(): Promise<DiscordSetup> {
@@ -169,22 +180,22 @@ export async function getDiscordSetup(): Promise<DiscordSetup> {
   if (!directorsRoleId) {
     console.warn(`No "${DIRECTORS_ROLE_NAME}" role found; new project channels won't include it`);
   }
-  const projectsCategoryId = channels.find(
+  const developmentCategoryId = channels.find(
     (channel) =>
       channel.type === CHANNEL_TYPE_CATEGORY &&
-      channel.name.toLowerCase() === PROJECTS_CATEGORY_NAME
+      sameChannelName(channel.name, DEVELOPMENT_CATEGORY_NAME)
   )?.id;
   const projectUpdatesChannelId =
     channels.find(
       (channel) =>
         (channel.type === CHANNEL_TYPE_TEXT || channel.type === CHANNEL_TYPE_ANNOUNCEMENT) &&
-        channel.name.toLowerCase() === PROJECT_UPDATES_CHANNEL_NAME
+        sameChannelName(channel.name, PROJECT_UPDATES_CHANNEL_NAME)
     )?.id ?? null;
 
   const missing = [
     !leadRoleId && `role "${LEAD_ROLE_NAME}"`,
     !developerRoleId && `role "${DEVELOPER_ROLE_NAME}"`,
-    !projectsCategoryId && `category "${PROJECTS_CATEGORY_NAME}"`,
+    !developmentCategoryId && `category "${DEVELOPMENT_CATEGORY_NAME}"`,
   ].filter(Boolean);
   if (missing.length > 0) {
     throw new DiscordError(0, `Discord server is missing ${missing.join(", ")}`);
@@ -194,7 +205,7 @@ export async function getDiscordSetup(): Promise<DiscordSetup> {
     leadRoleId: leadRoleId!,
     developerRoleId: developerRoleId!,
     directorsRoleId,
-    projectsCategoryId: projectsCategoryId!,
+    developmentCategoryId: developmentCategoryId!,
     projectUpdatesChannelId,
     botUserId: bot.id,
     channels,
@@ -235,7 +246,7 @@ export async function getChannel(channelId: string): Promise<DiscordChannel | nu
 }
 
 /**
- * A private channel under the projects category: hidden from @everyone, with
+ * A private channel under the development category: hidden from @everyone, with
  * the bot and the Directors of Project Management kept able to see it. Server
  * admins see every channel regardless.
  *
@@ -250,7 +261,7 @@ export function createPrivateProjectChannel(name: string, setup: DiscordSetup): 
     body: JSON.stringify({
       name,
       type: CHANNEL_TYPE_TEXT,
-      parent_id: setup.projectsCategoryId,
+      parent_id: setup.developmentCategoryId,
       permission_overwrites: [
         // The @everyone role shares the server's id
         { id: DISCORD_GUILD_ID, type: OVERWRITE_TYPE_ROLE, deny: VIEW_CHANNEL.toString(), allow: "0" },

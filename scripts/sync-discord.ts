@@ -20,8 +20,8 @@ import { syncProjectChannel } from "../src/lib/server/discordSync";
  *
  * For every project shown on Our Projects (not archived, with a repository in
  * the org):
- *   - makes sure it has a private channel under "projects", and that the
- *     lead and developers have access. It never removes anyone from a
+ *   - makes sure it has a private channel under "⚙️ Development", and
+ *     that the lead and developers have access. It never removes anyone from a
  *     channel: that only happens when someone leaves the project on the site.
  * Then mirrors roles across the whole server:
  *   - "Lead Developers" for every project lead, "Developers" for leads and
@@ -132,12 +132,12 @@ async function main() {
       const managed = new Set<string>(project.discordMemberIds ?? []);
       const toAdd = [...team].filter((id) => !managed.has(id)).length;
       // Same rule as the real run: a saved channel, else one already under
-      // the projects category with the repository's name, else a new one
+      // the development category with the repository's name, else a new one
       const name = channelNameFor(project.repositoryName);
       const existing = setup.channels.find(
         (channel) =>
           channel.id === project.discordChannelId ||
-          (channel.type === 0 && channel.parent_id === setup.projectsCategoryId && channel.name === name)
+          (channel.type === 0 && channel.parent_id === setup.developmentCategoryId && channel.name === name)
       );
       console.log(
         `#${name}: ${existing ? `would use existing #${existing.name}` : "would create a new private channel"}, ` +

@@ -75,7 +75,7 @@ export async function ensureProjectChannel(
   const name = channelNameFor(project.repositoryName);
   const existing = setup.channels.find(
     (channel) =>
-      channel.type === 0 && channel.parent_id === setup.projectsCategoryId && channel.name === name
+      channel.type === 0 && channel.parent_id === setup.developmentCategoryId && channel.name === name
   );
 
   const channel = existing ?? (await createPrivateProjectChannel(name, setup));
