@@ -53,13 +53,13 @@ The official website for [Open Sourcery](https://github.com/Open-Sourcery-UMD), 
 Contributions are welcome! Here's how to get started:
 
 1. Fork the repository
-2. Create a feature branch from `dev`:
+2. Create a feature branch from `main`:
    ```bash
    git checkout -b your-feature-name
    ```
 3. Make your changes
 4. Test locally to make sure everything works
-5. Open a pull request targeting the `dev` branch
+5. Open a pull request targeting the `main` branch
 
 ### Finding Work
 
