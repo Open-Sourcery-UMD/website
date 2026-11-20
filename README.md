@@ -61,6 +61,10 @@ Contributions are welcome! Here's how to get started:
 4. Test locally to make sure everything works
 5. Open a pull request targeting the `main` branch
 
+### Architecture
+
+To familiarize yourself with the codebase, we'd suggest to start by taking a look at an auto-generated architecture diagram [here](https://gitdiagram.com/open-sourcery-umd/website).
+
 ### Finding Work
 
 Check the [GitHub Issues](https://github.com/Open-Sourcery-UMD/website/issues) for open tasks. Issues labeled `good first issue` are a great starting point for new contributors.
@@ -70,3 +74,4 @@ Check the [GitHub Issues](https://github.com/Open-Sourcery-UMD/website/issues) f
 - Follow existing code patterns and conventions
 - Keep PRs focused (one feature or fix per pull request)
 - Write clear commit messages describing what changed and why
+- No restrictions on GenAI/agents; just be sure to review any changes yourself
