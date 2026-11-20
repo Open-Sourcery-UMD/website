@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FirebaseError } from "firebase/app";
 import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@firebaseConfig";
 import FormHeader from "@components/forms/FormHeader";
@@ -59,16 +60,19 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
       router.push("/");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error:", error);
-      if (error.code === "auth/user-not-found") {
+      const code = error instanceof FirebaseError ? error.code : "";
+      if (code === "auth/user-not-found") {
         setErrorMessage("No account found with this email. Please sign up first.");
-      } else if (error.code === "auth/wrong-password") {
+      } else if (code === "auth/wrong-password") {
         setErrorMessage("Incorrect password.");
-      } else if (error.code === "auth/invalid-credential") {
+      } else if (code === "auth/invalid-credential") {
         setErrorMessage("Invalid email or password.");
       } else {
-        setErrorMessage(error.message || "An error occurred. Please try again.");
+        setErrorMessage(
+          (error instanceof Error && error.message) || "An error occurred. Please try again."
+        );
       }
       setLoading(false);
     }
@@ -102,12 +106,13 @@ export default function LoginPage() {
     try {
       await sendPasswordResetEmail(auth, email);
       setResetSentTo(email);
-    } catch (error: any) {
-      if (error.code === "auth/user-not-found") {
+    } catch (error) {
+      const code = error instanceof FirebaseError ? error.code : "";
+      if (code === "auth/user-not-found") {
         // Answer exactly as for a real account, so this form can't be used
         // to find out who has one
         setResetSentTo(email);
-      } else if (error.code === "auth/too-many-requests") {
+      } else if (code === "auth/too-many-requests") {
         setErrorMessage("Too many requests. Please wait a few minutes and try again.");
       } else {
         console.error("Password reset error:", error);
@@ -232,7 +237,7 @@ export default function LoginPage() {
               </button>
             </p>
             <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button
                 onClick={handleSignUpLink}
                 className="text-ycs-blue hover:underline font-medium"

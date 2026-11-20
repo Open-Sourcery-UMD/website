@@ -497,7 +497,7 @@ export default function SettingsPage() {
                   </div>
                 )}
                 <p className="text-sm text-gray-600 mb-3">
-                  Didn't receive the verification email? <button
+                  Didn&apos;t receive the verification email? <button
                     onClick={handleResendVerificationEmail}
                     disabled={resendingEmail}
                     className="text-ycs-blue hover:underline font-medium disabled:opacity-50"

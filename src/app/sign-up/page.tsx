@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { FirebaseError } from "firebase/app";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth } from "@firebaseConfig";
 import { checkDiscordMembership, createUserProfile } from "@lib/userService";
@@ -206,12 +207,14 @@ export default function SignUpPage() {
       // Stay on the confirmation so they can read the note about checking spam;
       // they leave when they're ready
       setCurrentPage(3);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Sign-up error:", error);
-      if (error.code === "auth/email-already-in-use") {
+      if (error instanceof FirebaseError && error.code === "auth/email-already-in-use") {
         setErrorMessage("Email is already in use. Please use a different email.");
       } else {
-        setErrorMessage(error.message || "An error occurred. Please try again.");
+        setErrorMessage(
+          (error instanceof Error && error.message) || "An error occurred. Please try again."
+        );
       }
       setLoading(false);
     }

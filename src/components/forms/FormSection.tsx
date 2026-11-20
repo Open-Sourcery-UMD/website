@@ -1,7 +1,7 @@
 import React from "react";
 
 interface FormSectionProps {
-  children: any;
+  children: React.ReactNode;
   onBack: () => void;
   onNext: () => void;
   submitText: string;

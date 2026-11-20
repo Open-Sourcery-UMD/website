@@ -116,7 +116,7 @@ export default function GemsPage({ semester }: { semester: string }) {
               ⚠️ Verify your email to see your gems
             </p>
             <p className="text-yellow-700 text-sm">
-              Please verify your email address to unlock and view your gem count. You'll be able to track your progress once your email is verified.
+              Please verify your email address to unlock and view your gem count. You&apos;ll be able to track your progress once your email is verified.
             </p>
           </div>
         )}

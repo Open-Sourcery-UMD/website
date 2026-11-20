@@ -83,7 +83,7 @@ const ProjectProposalPage = () => {
     return (
       <div className="flex flex-col items-center text-center justify-center px-10">
         <h1 className='mt-20 text-2xl'>
-          You're already on the {projectList} project{myProjects.length > 1 ? 's' : ''}!
+          You&apos;re already on the {projectList} project{myProjects.length > 1 ? 's' : ''}!
         </h1>
         <h2 className='mb-40 text-gray-500'>
           You can only be a Developer on one project at a time.

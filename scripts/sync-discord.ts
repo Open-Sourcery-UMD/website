@@ -13,7 +13,7 @@ import {
   normalizeDiscordUsername,
   removeRole,
 } from "../src/lib/discordApi";
-import { syncProjectChannel } from "../src/lib/server/discordSync";
+import { ChannelProject, syncProjectChannel } from "../src/lib/server/discordSync";
 
 /**
  * Daily Discord sync.
@@ -86,10 +86,14 @@ async function main() {
     else if (username) unmatched.push(username);
   }
 
+  // What the sync needs from a project document, on top of the fields the
+  // channel helpers already declare
+  type ListedProject = ChannelProject & { status?: string; pointOfContact: string };
+
   // The projects Our Projects shows
   const validRepos = new Set(orgRepos.map((repo) => repo.toLowerCase()));
   const listed = projectsSnapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }) as Record<string, any>)
+    .map((doc) => ({ id: doc.id, ...doc.data() }) as ListedProject)
     .filter(
       (project) =>
         project.status !== "ARCHIVED" &&
